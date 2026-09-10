@@ -1,2 +1,12 @@
 // Bytecode package: opcode definitions and Chunk container.
 // Owner milestone: M1 (first opcode set), each later milestone appends new opcodes without breaking existing semantics.
+
+import {
+  "moonbitlang/core/debug",
+  "heyq02/moonjs/src/util",
+  "heyq02/moonjs/src/value",
+}
+
+import {
+  "moonbitlang/core/test",
+} for "test"

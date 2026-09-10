@@ -1,11 +1,202 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "heyq02/moonjs/src/bytecode"
 
+import {
+  "heyq02/moonjs/src/util",
+  "heyq02/moonjs/src/value",
+  "moonbitlang/core/debug",
+}
+
 // Values
+pub const OP_ADD : Byte = 0x20
+
+pub const OP_ARRAY_PUSH : Byte = 0x49
+
+pub const OP_BAND : Byte = 0x28
+
+pub const OP_BNOT : Byte = 0x27
+
+pub const OP_BOR : Byte = 0x29
+
+pub const OP_BXOR : Byte = 0x2A
+
+pub const OP_CALL : Byte = 0x51
+
+pub const OP_CALL_METHOD : Byte = 0x52
+
+pub const OP_CONSTRUCT : Byte = 0x53
+
+pub const OP_DECLARE_GLOBAL : Byte = 0x16
+
+pub const OP_DEFINE_PROP : Byte = 0x41
+
+pub const OP_DELETE_ELEM : Byte = 0x47
+
+pub const OP_DELETE_PROP : Byte = 0x46
+
+pub const OP_DIV : Byte = 0x23
+
+pub const OP_DROP : Byte = 0x08
+
+pub const OP_DUP : Byte = 0x07
+
+pub const OP_ENTER_TRY : Byte = 0x71
+
+pub const OP_EQ : Byte = 0x2E
+
+pub const OP_GE : Byte = 0x35
+
+pub const OP_GET_ELEM : Byte = 0x44
+
+pub const OP_GET_GLOBAL : Byte = 0x14
+
+pub const OP_GET_LOCAL : Byte = 0x10
+
+pub const OP_GET_PROP : Byte = 0x42
+
+pub const OP_GET_UPVALUE : Byte = 0x12
+
+pub const OP_GT : Byte = 0x34
+
+pub const OP_HALT : Byte = 0xFF
+
+pub const OP_IN : Byte = 0x39
+
+pub const OP_INSTANCEOF : Byte = 0x38
+
+pub const OP_JUMP : Byte = 0x60
+
+pub const OP_JUMP_IF_FALSE : Byte = 0x62
+
+pub const OP_JUMP_IF_TRUE : Byte = 0x61
+
+pub const OP_LE : Byte = 0x33
+
+pub const OP_LEAVE_TRY : Byte = 0x72
+
+pub const OP_LT : Byte = 0x32
+
+pub const OP_MOD : Byte = 0x24
+
+pub const OP_MUL : Byte = 0x22
+
+pub const OP_NE : Byte = 0x2F
+
+pub const OP_NEG : Byte = 0x26
+
+pub const OP_NEW_ARRAY : Byte = 0x48
+
+pub const OP_NEW_CLOSURE : Byte = 0x50
+
+pub const OP_NEW_OBJECT : Byte = 0x40
+
+pub const OP_NOP : Byte = 0x00
+
+pub const OP_NOT : Byte = 0x36
+
+pub const OP_POP : Byte = 0x0A
+
+pub const OP_POW : Byte = 0x25
+
+pub const OP_PUSH_CONST : Byte = 0x06
+
+pub const OP_PUSH_FALSE : Byte = 0x04
+
+pub const OP_PUSH_I32 : Byte = 0x05
+
+pub const OP_PUSH_NULL : Byte = 0x02
+
+pub const OP_PUSH_TRUE : Byte = 0x03
+
+pub const OP_PUSH_UNDEF : Byte = 0x01
+
+pub const OP_RETURN_UNDEF : Byte = 0x55
+
+pub const OP_RETURN_VAL : Byte = 0x54
+
+pub const OP_SEQ : Byte = 0x30
+
+pub const OP_SET_ELEM : Byte = 0x45
+
+pub const OP_SET_GLOBAL : Byte = 0x15
+
+pub const OP_SET_LOCAL : Byte = 0x11
+
+pub const OP_SET_PROP : Byte = 0x43
+
+pub const OP_SET_UPVALUE : Byte = 0x13
+
+pub const OP_SHL : Byte = 0x2B
+
+pub const OP_SHR : Byte = 0x2C
+
+pub const OP_SNE : Byte = 0x31
+
+pub const OP_SUB : Byte = 0x21
+
+pub const OP_SWAP : Byte = 0x09
+
+pub const OP_THROW : Byte = 0x70
+
+pub const OP_TYPEOF : Byte = 0x37
+
+pub const OP_USHR : Byte = 0x2D
+
+pub const OP_WIDE : Byte = 0xFE
+
+pub fn decode(UInt) -> DecodedInstr
+
+pub fn encode(Byte, Byte, Byte, Byte) -> UInt
+
+pub fn opcode_name(Byte) -> String
 
 // Errors
 
 // Types and methods
+#alias(ChunkRef)
+pub struct Chunk {
+  code : Array[UInt]
+  const_pool : Array[@value.JSValue]
+  source_locs : Array[@util.SourceLoc]
+  name : String
+  filename : String
+  param_count : Int
+  mut local_count : Int
+  upvalue_slots : Array[UpvalueSlotDecl]
+  nested_chunks : Array[Chunk]
+  mut is_strict : Bool
+} derive(@debug.Debug)
+pub fn Chunk::add_const(Self, @value.JSValue) -> Int
+pub fn Chunk::add_nested(Self, Self) -> Int
+pub fn Chunk::add_upvalue(Self, UpvalueSlotDecl) -> Int
+pub fn Chunk::alloc_local(Self) -> Int
+pub fn Chunk::disassemble(Self) -> String
+pub fn Chunk::emit(Self, Byte, Byte, Byte, Byte, @util.SourceLoc) -> Unit
+pub fn Chunk::emit_wide_i32(Self, Byte, Int, @util.SourceLoc) -> Unit
+pub fn Chunk::emit_wide_u32(Self, Byte, UInt, @util.SourceLoc) -> Unit
+pub fn Chunk::new(String, String, Int) -> Self
+pub fn Chunk::patch_jump(Self, Int, Int) -> Unit
+pub fn Chunk::read_operand_i24(Self, Int) -> (Int, Int)
+pub fn Chunk::read_operand_u24(Self, Int) -> (UInt, Int)
+pub fn Chunk::set_strict(Self, Bool) -> Unit
+
+pub struct DecodedInstr {
+  op : Byte
+  a : Byte
+  b : Byte
+  c : Byte
+} derive(Eq, @debug.Debug)
+
+pub(all) enum UpvalueFromKind {
+  Local
+  ParentUpvalue
+} derive(Eq, @debug.Debug)
+
+pub struct UpvalueSlotDecl {
+  from_kind : UpvalueFromKind
+  from_idx : Int
+} derive(Eq, @debug.Debug)
+pub fn UpvalueSlotDecl::new(UpvalueFromKind, Int) -> Self
 
 // Type aliases
 
