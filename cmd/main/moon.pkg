@@ -1,0 +1,5 @@
+// import {
+//   "heyq02/moonjs" @lib,
+// }
+
+pkgtype(kind: "executable")
