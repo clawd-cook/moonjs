@@ -1,11 +1,340 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "heyq02/moonjs/src/ast"
 
+import {
+  "heyq02/moonjs/src/util",
+  "moonbitlang/core/debug",
+}
+
 // Values
 
 // Errors
 
 // Types and methods
+pub(all) enum Argument {
+  ArgExpr(Expr)
+  ArgSpread(Expr)
+} derive(@debug.Debug)
+
+pub(all) enum ArrayElement {
+  Hole
+  Item(Expr)
+  ArrayElementSpread(Expr)
+} derive(@debug.Debug)
+
+pub(all) enum ArrayPatElement {
+  PatHole
+  PatItem(Pattern)
+} derive(@debug.Debug)
+
+pub(all) enum ArrowBody {
+  ExprBody(Expr)
+  BlockBody(Block)
+} derive(@debug.Debug)
+
+pub(all) enum AssignOp {
+  Assign
+  AddAssign
+  SubAssign
+  MulAssign
+  DivAssign
+  ModAssign
+  PowAssign
+  ShlAssign
+  ShrAssign
+  UShrAssign
+  BitAndAssign
+  BitOrAssign
+  BitXorAssign
+  AndAssign
+  OrAssign
+  NullishAssign
+} derive(Eq, @debug.Debug)
+
+pub(all) enum BinOp {
+  Add
+  Sub
+  Mul
+  Div
+  Mod
+  Pow
+  BitAnd
+  BitOr
+  BitXor
+  Shl
+  Shr
+  UShr
+  Eq
+  Ne
+  StrictEq
+  StrictNe
+  Lt
+  Le
+  Gt
+  Ge
+  In
+  InstanceOf
+} derive(Eq, @debug.Debug)
+
+pub struct Block {
+  body : Array[Stmt]
+} derive(@debug.Debug)
+pub fn Block::new(Array[Stmt]) -> Self
+
+pub struct CatchClause {
+  param : Pattern?
+  body : Array[Stmt]
+} derive(@debug.Debug)
+pub fn CatchClause::new(Pattern?, Array[Stmt]) -> Self
+
+pub struct ClassBody {
+  members : Array[ClassMember]
+} derive(@debug.Debug)
+pub fn ClassBody::new(Array[ClassMember]) -> Self
+
+pub(all) enum ClassMember {
+  MethodDefMember(MethodDef)
+  PropDefMember(PropDef)
+  StaticBlock(body~ : Array[Stmt])
+} derive(@debug.Debug)
+
+pub(all) enum DefaultExport {
+  DefExpr(Expr)
+  DefFn(id~ : String?, params~ : Array[Pattern], body~ : Block, is_async~ : Bool, is_generator~ : Bool)
+  DefClass(id~ : String?, super_class~ : Expr?, body~ : ClassBody)
+} derive(@debug.Debug)
+
+pub(all) enum ExportDecl {
+  ExportNamed(specifiers~ : Array[ExportSpecifier], source~ : String?)
+  ExportDefault(DefaultExport)
+  ExportAll(source~ : String, exported~ : String?)
+} derive(@debug.Debug)
+
+pub struct ExportSpecifier {
+  local_name : String
+  exported : String
+} derive(@debug.Debug)
+pub fn ExportSpecifier::new(String, String) -> Self
+
+pub struct Expr {
+  span : @util.SourceSpan
+  kind : ExprKind
+} derive(@debug.Debug)
+pub fn Expr::new(ExprKind, @util.SourceSpan) -> Self
+
+pub(all) enum ExprKind {
+  Undefined_
+  Null_
+  Boolean_(Bool)
+  NumberLit(Double)
+  StringLit(String)
+  TemplateLit(quasis~ : Array[String], exprs~ : Array[Expr])
+  RegExpLit(pattern~ : String, flags~ : String)
+  Identifier(String)
+  This_
+  Super_
+  Binary(op~ : BinOp, lhs~ : Expr, rhs~ : Expr)
+  Logical(op~ : LogOp, lhs~ : Expr, rhs~ : Expr)
+  Unary(op~ : UnaryOp, arg~ : Expr, prefix~ : Bool)
+  Update(op~ : UpdateOp, arg~ : Expr, prefix~ : Bool)
+  Assign(op~ : AssignOp, lhs~ : Expr, rhs~ : Expr)
+  Cond(cond~ : Expr, cons~ : Expr, alt~ : Expr)
+  Member(obj~ : Expr, prop~ : String)
+  IndexAccess(obj~ : Expr, index~ : Expr)
+  OptionalMember(obj~ : Expr, prop~ : String, optional~ : Bool)
+  OptionalIndex(obj~ : Expr, index~ : Expr, optional~ : Bool)
+  OptionalCall(callee~ : Expr, args~ : Array[Argument], optional~ : Bool)
+  Call(callee~ : Expr, args~ : Array[Argument])
+  New(callee~ : Expr, args~ : Array[Argument])
+  ObjectLit(props~ : Array[ObjectProperty])
+  ArrayLit(elements~ : Array[ArrayElement])
+  FnExpr(id~ : String?, params~ : Array[Pattern], body~ : Block, is_async~ : Bool, is_generator~ : Bool)
+  ArrowFn(params~ : Array[Pattern], body~ : ArrowBody, is_async~ : Bool)
+  ClassExpr(id~ : String?, super_class~ : Expr?, body~ : ClassBody)
+  Sequence(exprs~ : Array[Expr])
+  YieldExpr(arg~ : Expr?, delegate~ : Bool)
+  AwaitExpr(arg~ : Expr)
+  TaggedTemplate(tag~ : Expr, quasi~ : Expr)
+} derive(@debug.Debug)
+
+pub struct FnMeta {
+  params : Array[Pattern]
+  body : Block
+  is_async : Bool
+  is_generator : Bool
+} derive(@debug.Debug)
+pub fn FnMeta::new(Array[Pattern], Block, Bool, Bool) -> Self
+
+pub(all) enum ForBinding {
+  BindingVar(kind~ : VarKind, decls~ : Array[VarDeclarator])
+  BindingPat(Pattern)
+} derive(@debug.Debug)
+
+pub(all) enum ForInit {
+  InitVar(kind~ : VarKind, decls~ : Array[VarDeclarator])
+  InitExpr(Expr)
+} derive(@debug.Debug)
+
+pub struct ImportAttribute {
+  key : String
+  value : String
+} derive(@debug.Debug)
+pub fn ImportAttribute::new(String, String) -> Self
+
+pub struct ImportDecl {
+  source : String
+  specifiers : Array[ImportSpecifier]
+  attrs : Array[ImportAttribute]
+} derive(@debug.Debug)
+pub fn ImportDecl::new(String, Array[ImportSpecifier], Array[ImportAttribute]) -> Self
+
+pub(all) enum ImportSpecifier {
+  Default(local_name~ : String)
+  Namespace(local_name~ : String)
+  Named(imported~ : String, local_name~ : String)
+} derive(@debug.Debug)
+
+pub(all) enum LogOp {
+  And
+  Or
+  NullishCoalescing
+} derive(Eq, @debug.Debug)
+
+pub struct MethodDef {
+  key : PropertyKey
+  kind : MethodKind
+  is_static : Bool
+  is_private : Bool
+  params : Array[Pattern]
+  body : Block
+  is_async : Bool
+  is_generator : Bool
+} derive(@debug.Debug)
+pub fn MethodDef::new(PropertyKey, MethodKind, Bool, Bool, Array[Pattern], Block, Bool, Bool) -> Self
+
+pub(all) enum MethodKind {
+  Constructor
+  Method
+  Getter
+  Setter
+} derive(Eq, @debug.Debug)
+
+pub struct ObjectPatProp {
+  key : PropertyKey
+  value : Pattern
+  computed : Bool
+  shorthand : Bool
+} derive(@debug.Debug)
+pub fn ObjectPatProp::new(PropertyKey, Pattern, Bool, Bool) -> Self
+
+pub(all) enum ObjectProperty {
+  KeyValue(key~ : PropertyKey, value~ : Expr, shorthand~ : Bool)
+  MethodShorthand(key~ : PropertyKey, fn_meta~ : FnMeta)
+  Getter(key~ : PropertyKey, params~ : Array[Pattern], body~ : Block)
+  Setter(key~ : PropertyKey, params~ : Array[Pattern], body~ : Block)
+  SpreadProp(Expr)
+} derive(@debug.Debug)
+
+pub struct Pattern {
+  span : @util.SourceSpan
+  kind : PatternKind
+} derive(@debug.Debug)
+pub fn Pattern::new(PatternKind, @util.SourceSpan) -> Self
+
+pub(all) enum PatternKind {
+  IdentPat(name~ : String)
+  ObjectPat(props~ : Array[ObjectPatProp], rest~ : String?)
+  ArrayPat(elements~ : Array[ArrayPatElement], rest~ : Pattern?)
+  AssignPat(left~ : Pattern, right~ : Expr)
+} derive(@debug.Debug)
+
+pub struct Program {
+  body : Array[Stmt]
+  is_module : Bool
+} derive(@debug.Debug)
+pub fn Program::new(Array[Stmt], Bool) -> Self
+
+pub struct PropDef {
+  key : PropertyKey
+  value : Expr?
+  is_static : Bool
+  is_private : Bool
+} derive(@debug.Debug)
+pub fn PropDef::new(PropertyKey, Expr?, Bool, Bool) -> Self
+
+pub(all) enum PropertyKey {
+  IdKey(String)
+  StringKey(String)
+  NumberKey(Double)
+  ComputedKey(Expr)
+  PrivateKey(String)
+} derive(@debug.Debug)
+
+pub struct Stmt {
+  span : @util.SourceSpan
+  kind : StmtKind
+} derive(@debug.Debug)
+pub fn Stmt::new(StmtKind, @util.SourceSpan) -> Self
+
+pub(all) enum StmtKind {
+  BlockStmt(body~ : Array[Stmt])
+  ExprStmt(expr~ : Expr)
+  If(cond~ : Expr, cons~ : Stmt, alt~ : Stmt?)
+  While(cond~ : Expr, body~ : Stmt)
+  DoWhile(body~ : Stmt, cond~ : Expr)
+  For(init~ : ForInit?, cond~ : Expr?, update~ : Expr?, body~ : Stmt)
+  ForIn(left~ : ForBinding, right~ : Expr, body~ : Stmt)
+  ForOf(left~ : ForBinding, right~ : Expr, body~ : Stmt, is_await~ : Bool)
+  Switch(disc~ : Expr, cases~ : Array[SwitchCase])
+  Break(label~ : String?)
+  Continue(label~ : String?)
+  Return(arg~ : Expr?)
+  Throw(arg~ : Expr)
+  Try(body~ : Array[Stmt], catch_~ : CatchClause?, finally_~ : Array[Stmt]?)
+  Labeled(label~ : String, body~ : Stmt)
+  VarDecl(kind~ : VarKind, decls~ : Array[VarDeclarator])
+  FunctionDecl(id~ : String, params~ : Array[Pattern], body~ : Block, is_async~ : Bool, is_generator~ : Bool)
+  ClassDecl(id~ : String, super_class~ : Expr?, body~ : ClassBody)
+  Empty
+  With(obj~ : Expr, body~ : Stmt)
+  ImportDeclStmt(ImportDecl)
+  ExportDeclStmt(ExportDecl)
+} derive(@debug.Debug)
+
+pub struct SwitchCase {
+  cond : Expr?
+  body : Array[Stmt]
+} derive(@debug.Debug)
+pub fn SwitchCase::new(Expr?, Array[Stmt]) -> Self
+
+pub(all) enum UnaryOp {
+  UPlus
+  UMinus
+  LogicalNot
+  BitNot
+  TypeOf
+  Void
+  Delete
+} derive(Eq, @debug.Debug)
+
+pub(all) enum UpdateOp {
+  Inc
+  Dec
+} derive(Eq, @debug.Debug)
+
+pub struct VarDeclarator {
+  pat : Pattern
+  init : Expr?
+} derive(@debug.Debug)
+pub fn VarDeclarator::new(Pattern, Expr?) -> Self
+
+pub(all) enum VarKind {
+  Var
+  Let
+  Const
+  Using
+  AwaitUsing
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 

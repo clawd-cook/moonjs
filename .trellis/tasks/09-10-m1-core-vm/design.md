@@ -102,10 +102,17 @@ pub struct StackFrameInfo {
 
 ## 3. `src/ast`
 
-覆盖 ES2023+ 完整语法。M1 只列出关键结构（详细字段在实现时定，且要为 M2 语义预留字段占位而不是"到时再改"）：
+覆盖 ES2023+ 完整语法。每个 AST 节点用 wrapper 结构 `{ span, kind }` 承载 SourceSpan（Option A），`kind` 是 `pub(all) enum` 以便 parser / compiler 跨包 pattern match。
+
+**MoonBit 保留字规避（参见 `.trellis/spec/backend/quality-guidelines.md`）**：`test` / `local` / `method` / `if` / `else` / `catch` / `try` / `while` / `for` / `return` / `break` / `continue` / `type` / `fn` 是硬保留；`finally` 是软保留。以下命名与之对齐。
 
 ```moonbit
-pub enum Expr {
+pub struct Expr {
+  span : @util.SourceSpan
+  kind : ExprKind
+} derive(@debug.Debug)
+
+pub(all) enum ExprKind {
   // Literal
   Undefined_
   Null_
@@ -124,13 +131,14 @@ pub enum Expr {
   Unary(op~ : UnaryOp, arg~ : Expr, prefix~ : Bool)
   Update(op~ : UpdateOp, arg~ : Expr, prefix~ : Bool)   // ++ --
   Assign(op~ : AssignOp, lhs~ : Expr, rhs~ : Expr)
-  Cond(test~ : Expr, cons~ : Expr, alt~ : Expr)
+  Cond(cond~ : Expr, cons~ : Expr, alt~ : Expr)         // `cond` 而非 `test`（保留字）
 
   // Access
-  Member(obj~ : Expr, prop~ : String, computed~ : Bool)
-  IndexAccess(obj~ : Expr, index~ : Expr)
-  OptionalMember(...)                                          // M2
-  OptionalCall(...)                                            // M2
+  Member(obj~ : Expr, prop~ : String)                   // 静态 `.foo`
+  IndexAccess(obj~ : Expr, index~ : Expr)               // 动态 `[expr]`
+  OptionalMember(obj~ : Expr, prop~ : String, optional~ : Bool)  // M2
+  OptionalIndex(obj~ : Expr, index~ : Expr, optional~ : Bool)    // M2
+  OptionalCall(callee~ : Expr, args~ : Array[Argument], optional~ : Bool)  // M2
 
   // Call / new
   Call(callee~ : Expr, args~ : Array[Argument])
@@ -138,48 +146,62 @@ pub enum Expr {
 
   // Object / Array literal
   ObjectLit(props~ : Array[ObjectProperty])
-  ArrayLit(elements~ : Array[ArrayElement])                    // 允许 hole 与 spread
+  ArrayLit(elements~ : Array[ArrayElement])             // 允许 hole 与 spread（在 ArrayElement 内）
 
   // Function
-  FnExpr(...)
-  ArrowFn(...)                                                 // M2
-  ClassExpr(...)                                               // M2
+  FnExpr(id~ : String?, params~ : Array[Pattern], body~ : Block, is_async~ : Bool, is_generator~ : Bool)
+  ArrowFn(params~ : Array[Pattern], body~ : ArrowBody, is_async~ : Bool)      // M2
+  ClassExpr(id~ : String?, super_class~ : Expr?, body~ : ClassBody)          // M2
 
   // Etc
   Sequence(exprs~ : Array[Expr])
-  Spread(arg~ : Expr)                                          // M2
-  YieldExpr(...)                                               // M2
-  AwaitExpr(...)                                               // M4
-  TaggedTemplate(...)                                          // M2
-} with SourceSpan
+  YieldExpr(arg~ : Expr?, delegate~ : Bool)                                   // M2, delegate=true 即 yield*
+  AwaitExpr(arg~ : Expr)                                                      // M4
+  TaggedTemplate(tag~ : Expr, quasi~ : Expr)                                  // M2, quasi 是 TemplateLit
+}
 
-pub enum Stmt {
-  Block(body~ : Array[Stmt])
-  ExprStmt(expr~ : Expr)
-  If(test~ : Expr, cons~ : Stmt, alt~ : Stmt?)
-  While(test~ : Expr, body~ : Stmt)
-  DoWhile(body~ : Stmt, test~ : Expr)
-  For(init~ : ForInit?, test~ : Expr?, update~ : Expr?, body~ : Stmt)
-  ForIn(...)                                                    // M2
-  ForOf(...)                                                    // M2
+pub struct Stmt {
+  span : @util.SourceSpan
+  kind : StmtKind
+} derive(@debug.Debug)
+
+pub(all) enum StmtKind {
+  BlockStmt(Array[Stmt])                              // 变体名 `BlockStmt` 而非 `Block`（避与 struct Block 混淆）
+  ExprStmt(Expr)
+  If(cond~ : Expr, cons~ : Stmt, alt~ : Stmt?)        // `cond` 而非 `test`
+  While(cond~ : Expr, body~ : Stmt)
+  DoWhile(body~ : Stmt, cond~ : Expr)
+  For(init~ : ForInit?, cond~ : Expr?, update~ : Expr?, body~ : Stmt)
+  ForIn(left~ : ForBinding, right~ : Expr, body~ : Stmt)                       // M2
+  ForOf(left~ : ForBinding, right~ : Expr, body~ : Stmt, is_await~ : Bool)     // M2
   Switch(disc~ : Expr, cases~ : Array[SwitchCase])
   Break(label~ : String?)
   Continue(label~ : String?)
   Return(arg~ : Expr?)
   Throw(arg~ : Expr)
-  Try(body~ : Block, catch_~ : CatchClause?, finally_~ : Block?)
+  Try(body~ : Array[Stmt], catch_~ : CatchClause?, finally_~ : Array[Stmt]?)   // `finally_` (finally 软保留)
   Labeled(label~ : String, body~ : Stmt)
   VarDecl(kind~ : VarKind, decls~ : Array[VarDeclarator])
-  FunctionDecl(...)
-  ClassDecl(...)                                                // M2
+  FunctionDecl(id~ : String, params~ : Array[Pattern], body~ : Block, is_async~ : Bool, is_generator~ : Bool)
+  ClassDecl(id~ : String, super_class~ : Expr?, body~ : ClassBody)             // M2
   Empty
-  With(obj~ : Expr, body~ : Stmt)                               // M2
-  ImportDecl(...)                                               // M5
-  ExportDecl(...)                                               // M5
-} with SourceSpan
+  With(obj~ : Expr, body~ : Stmt)                                              // M2
+  ImportDeclStmt(ImportDecl)                                                   // M5, 变体名 `-Stmt` 后缀
+  ExportDeclStmt(ExportDecl)                                                   // M5
+}
 
-pub enum VarKind { Var; Let; Const; Using; AwaitUsing }
+pub(all) enum VarKind { Var; Let; Const; Using; AwaitUsing } derive(Eq)
 ```
+
+Pattern / ClassBody / Module 组件详见 `src/ast/{pattern,class,module}.mbt`（略）。所有支持类型：
+- `Argument = ArgExpr(Expr) | ArgSpread(Expr)`
+- `ArrayElement = ArrayElementHole | ArrayElementItem(Expr) | ArrayElementSpread(Expr)` （变体名带 `ArrayElement-` 前缀避免顶层 collision）
+- `ArrowBody = ExprBody(Expr) | BlockBody(Block)`
+- `ClassMember = MethodDefMember(MethodDef) | PropDefMember(PropDef) | StaticBlock(Array[Stmt])`（同名冲突加 `-Member` 后缀）
+- `ObjectPatProp { key: String, value: Pattern, computed: Bool, shorthand: Bool }`
+- `Pattern { span, kind }` where `PatternKind = IdentPat(String) | ObjectPat(props~ : Array[ObjectPatProp], rest~ : String?) | ArrayPat(elements~ : Array[ArrayPatElement], rest~ : Pattern?) | AssignPat(left~ : Pattern, right~ : Expr)`
+- `ImportSpecifier = Default(local_name~ : String) | Namespace(local_name~ : String) | Named(imported~ : String, local_name~ : String)` （`local_name` 而非 `local`）
+- `ObjectProperty::MethodShorthand(key, fn_meta)` 而非 `method`（保留字）
 
 （枚举里带 M2..M5 变体，是"parser 完整"策略的实现。M1 compiler 遇到这些变体统一抛 `NotImplementedYet`。）
 

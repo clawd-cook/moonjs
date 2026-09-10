@@ -70,6 +70,68 @@ for state = init {
 
 ---
 
+### Don't: use MoonBit reserved keywords as variant field names / enum variant names
+
+**Hard-reserved words** (parser rejects with `unexpected token`; must rename):
+
+`test`, `local`, `method`, `if`, `else`, `catch`, `try`, `while`, `for`, `return`, `break`, `continue`, `type`, `fn`.
+
+**Soft-reserved / warns under `--deny-warn`** (compile succeeds but `--deny-warn` promotes to error; append `_`):
+
+`finally` → `finally_`.
+
+**Confirmed NOT reserved** (safe as identifiers):
+
+`case`, `default`, `switch`, `class`, `extends`, `this`, `new`, `super`.
+
+**Problem**:
+```moonbit
+pub(all) enum StmtKind {
+  If(test~ : Expr, cons~ : Stmt, alt~ : Stmt?)   // `test` — parser error
+  Try(body~ : Array[Stmt], catch_~, finally~ : Array[Stmt]?)  // `finally` — --deny-warn error
+}
+```
+
+**Instead**:
+```moonbit
+pub(all) enum StmtKind {
+  If(cond~ : Expr, cons~ : Stmt, alt~ : Stmt?)
+  Try(body~ : Array[Stmt], catch_~, finally_~ : Array[Stmt]?)
+}
+```
+
+**Why it matters**: MoonBit's error messages for reserved-keyword-as-identifier are unhelpful (`error [3002] unexpected token 'test'`). Knowing the list up front avoids a diagnosis dead-end.
+
+**Source**: M1 Step 3 (`src/ast/{expr,stmt,module}.mbt`) verified all listed names against a minimal MoonBit repro. Recorded 2026-09-10.
+
+---
+
+### Variant / struct name collisions are tolerated but read as ambiguity
+
+MoonBit **does not** reject an enum variant sharing a name with a struct in the same package (pattern matching and construction disambiguate by expected type). Still, at read sites `Block` — is that the struct (function body) or the `StmtKind::Block` variant? — is unclear.
+
+**Convention**: when an enum variant wraps a same-named struct payload, suffix the variant name to disambiguate.
+
+```moonbit
+pub struct Block { body : Array[Stmt] }         // function body
+pub(all) enum StmtKind {
+  BlockStmt(Array[Stmt])                        // statement wrapping a block — NOT `Block`
+  // ...
+  ImportDeclStmt(ImportDecl)                    // NOT `ImportDecl`
+  ExportDeclStmt(ExportDecl)
+}
+
+pub(all) enum ClassMember {
+  MethodDefMember(MethodDef)                    // NOT `MethodDef`
+  PropDefMember(PropDef)
+  StaticBlock(Array[Stmt])
+}
+```
+
+**Source**: M1 Step 3 AST review. Recorded 2026-09-10.
+
+---
+
 ## Required Patterns
 
 ### MoonBit block style

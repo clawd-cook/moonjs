@@ -1,2 +1,11 @@
 // AST package: ECMAScript syntax tree nodes shared by parser and compiler.
 // Owner milestone: M1 (core), extended in M2.
+
+import {
+  "moonbitlang/core/debug",
+  "heyq02/moonjs/src/util",
+}
+
+import {
+  "moonbitlang/core/test",
+} for "test"
