@@ -1,0 +1,2 @@
+// Promise package: microtask queue + Promise state machine + async/await plumbing.
+// Owner milestone: M4. CLI event loop hook exported for M5 consumers.

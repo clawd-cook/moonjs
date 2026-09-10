@@ -1,0 +1,2 @@
+// Bytecode package: opcode definitions and Chunk container.
+// Owner milestone: M1 (first opcode set), each later milestone appends new opcodes without breaking existing semantics.

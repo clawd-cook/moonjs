@@ -1,0 +1,10 @@
+{"file": "AGENTS.md", "reason": "Must run `moon info && moon fmt && moon test` per project convention; check .mbti diffs for unintended public API changes."}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Project code-spec: forbidden patterns (derive(Show)), required patterns (block style, .mbti review), toolchain gate. Applies to every code change."}
+{"file": ".trellis/tasks/09-10-m1-core-vm/prd.md", "reason": "Authoritative acceptance criteria list for M1 check runs."}
+{"file": ".trellis/tasks/09-10-m1-core-vm/design.md", "reason": "Cross-module contracts (JSValue variants, opcode encoding, source-loc parallel array, upvalue lifecycle) that checks verify are honored."}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "M1 crosses lexer -> parser -> ast -> bytecode -> vm -> builtins; cross-layer contract audits are mandatory in checks."}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "Object property lookup / operand stack manipulation / const-pool interning are repeated shapes; enforce reuse in check."}
+{"file": "quickjs/tests/test_language.js", "reason": "Full-file parse-through is an M1 parser gate; check dispatch must confirm parse-through remains passing after code changes."}
+{"file": "quickjs/tests/test_closure.js", "reason": "Same as above; closure semantics regression gate."}
+{"file": "quickjs/tests/parse-error-column.js", "reason": "Source of parser error location assertions M1 partially covers; check verifies M1-in-scope error columns still exact."}
+{"file": "quickjs/tests/global-reference-column.js", "reason": "Source of ReferenceError column assertions M1 must satisfy."}

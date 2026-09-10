@@ -1,7 +1,7 @@
 ///|
-/// Entry point for the CLI or runnable program in this template.
-/// Keep main focused; move logic into the library package.
-/// Run with `moon run cmd/main` from the project root.
+/// MoonJS CLI entry point.
+/// Milestone M1: prints a banner and exits 0.
+/// Milestone M5: implements `run <file>`, `-e <code>`, and QuickJS-compatible argv parsing.
 fn main {
-  println("Hello")
+  println("moonjs (M1 scaffold)")
 }

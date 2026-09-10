@@ -1,0 +1,2 @@
+// Lexer package: tokenizes JavaScript source into a token stream.
+// Owner milestone: M1.

@@ -1,0 +1,2 @@
+// Parser package: consumes tokens from src/lexer and produces an AST defined in src/ast.
+// Owner milestone: M1 (expression + core statements), extended in M2 (class/generator/etc.).

@@ -1,0 +1,35 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "heyq02/moonjs/src/util"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct Interner {
+  // private fields
+}
+pub fn Interner::intern(Self, String) -> Int
+pub fn Interner::length(Self) -> Int
+pub fn Interner::new() -> Self
+pub fn Interner::resolve(Self, Int) -> String
+
+pub struct SourceLoc {
+  line : UInt16
+  col : UInt16
+} derive(Eq, Hash, @debug.Debug)
+pub fn SourceLoc::new(Int, Int) -> Self
+
+pub struct SourceSpan {
+  start : SourceLoc
+  end : SourceLoc
+} derive(Eq, @debug.Debug)
+pub fn SourceSpan::new(SourceLoc, SourceLoc) -> Self
+
+// Type aliases
+
+// Traits

@@ -1,0 +1,33 @@
+{
+  "id": "moonjs-js-engine",
+  "name": "moonjs-js-engine",
+  "title": "MoonJS - JavaScript engine in pure MoonBit",
+  "description": "",
+  "status": "in_progress",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "heyongqi10",
+  "assignee": "heyongqi10",
+  "createdAt": "2026-09-10",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "master",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "09-10-m1-core-vm",
+    "09-10-m2-language-complete",
+    "09-10-m3-core-builtins",
+    "09-10-m4-advanced-runtime",
+    "09-10-m5-modules-cli",
+    "09-10-m6-test262"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}

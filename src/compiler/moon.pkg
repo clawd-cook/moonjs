@@ -1,0 +1,2 @@
+// Compiler package: AST -> Bytecode lowering, including scope resolution and constant pool.
+// Owner milestone: M1 (core subset), M2 (class/generator/iterator/spread/destructuring), M4 (async/await lowering, regexp literal).

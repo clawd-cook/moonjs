@@ -1,0 +1,2 @@
+// RegExp package: pattern parser, NFA/bytecode compilation, matcher engine. Parity target is quickjs/libregexp.c.
+// Owner milestone: M4.

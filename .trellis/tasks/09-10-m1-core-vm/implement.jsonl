@@ -1,0 +1,9 @@
+{"file": "AGENTS.md", "reason": "MoonBit block-style code convention, moon fmt/info/test workflow, blackbox vs whitebox tests — every implement dispatch inherits these."}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Project code-spec: forbidden patterns (derive(Show) deprecated in current toolchain, use derive(@debug.Debug)), required patterns, toolchain gate. Every implement dispatch must obey."}
+{"file": ".trellis/tasks/09-10-m1-core-vm/prd.md", "reason": "M1 scope, Q1..Q8 decisions, acceptance criteria (M1-feasible subset of quickjs tests)."}
+{"file": ".trellis/tasks/09-10-m1-core-vm/design.md", "reason": "Data structures (JSValue/Shape/Object/Chunk/Frame), M1 opcode table, exception propagation, upvalue lifecycle, harness plan."}
+{"file": ".trellis/tasks/09-10-m1-core-vm/implement.md", "reason": "Ordered execution steps 1..13 with per-step validation."}
+{"file": ".trellis/tasks/09-10-moonjs-js-engine/design.md", "reason": "Parent architectural contracts each M1 module must honor (package layout, cross-milestone invariants)."}
+{"file": "quickjs/quickjs-opcode.h", "reason": "Reference opcode listing to consult when confirming M1 opcode coverage. Design section 4.3 enumerates our chosen subset."}
+{"file": "quickjs/tests/test_language.js", "reason": "Source of M1 AC test functions test_op1/op2/cvt/inc_dec (lines 50/206/119/152)."}
+{"file": "quickjs/tests/test_closure.js", "reason": "Source of M1 AC test functions test_closure1..3 (lines 51/73/89) and top-level invocations."}

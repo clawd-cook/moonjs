@@ -1,0 +1,2 @@
+// VM package: main interpreter loop, Frame layout, operand/try-catch stacks, source location table.
+// Owner milestone: M1 (loop + eh + closures), M2 (generator suspension), M4 (await hookpoint into microtask queue).

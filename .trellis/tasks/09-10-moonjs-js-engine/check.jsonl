@@ -1,0 +1,5 @@
+{"file": "AGENTS.md", "reason": "Quality-check must run `moon info && moon fmt && moon test` per project convention — every check on any child inherits this."}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "MoonJS spans lexer -> parser -> bytecode -> vm -> builtins -> modules; cross-layer contract checks are mandatory before finishing any milestone."}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "6 milestones will repeatedly touch similar shapes (opcode dispatch, prototype-chain traversal, iterator protocol); enforce reuse to avoid drift."}
+{"file": "quickjs/tests.conf", "reason": "Authoritative allow/exclude list for quickjs/tests/*.js — parent-level regression gate consumes this."}
+{"file": "quickjs/test262-fast.conf", "reason": "Authoritative exclude list for M6 test262 runs — pass-rate metric is measured against this file."}

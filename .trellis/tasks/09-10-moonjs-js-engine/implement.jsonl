@@ -1,0 +1,4 @@
+{"file": "AGENTS.md", "reason": "MoonBit project layout, moon.pkg convention, and moon toolchain (fmt/info/test) — every sub-agent implementing MoonJS code needs these conventions."}
+{"file": ".trellis/tasks/09-10-moonjs-js-engine/design.md", "reason": "Parent architectural design (package layout, JSValue enum, bytecode/Frame contracts, GC strategy) — cross-child invariants each M-child must honor."}
+{"file": ".trellis/tasks/09-10-moonjs-js-engine/implement.md", "reason": "Parent roadmap: child ordering, parent-level acceptance gates, validation commands, and rollback points."}
+{"file": "quickjs/quickjs-opcode.h", "reason": "Reference-only listing of QuickJS opcodes; MoonJS bytecode design consults this as a coverage checklist without requiring binary compatibility."}
