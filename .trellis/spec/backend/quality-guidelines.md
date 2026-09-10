@@ -45,6 +45,31 @@ pub struct SourceLoc {
 
 ---
 
+### Don't: functional `loop { ... }` construct
+
+**Problem**:
+```moonbit
+loop init {
+  state => if done { break result } else { continue next }
+}
+```
+
+**Why it's bad**: The functional `loop { pattern => ... }` construct is deprecated in the current MoonBit toolchain (emits `[0027]` deprecation, fails under `--deny-warn`). It has been superseded by the more general `for state = init { ... }` form which supports the same shape more explicitly.
+
+**Instead**:
+```moonbit
+for state = init {
+  if done {
+    break result
+  }
+  continue next_state
+}
+```
+
+**Source**: M1 Step 2 (`src/value` prototype-chain walk in `Object::get_property` / `has_property`). Recorded 2026-09-10.
+
+---
+
 ## Required Patterns
 
 ### MoonBit block style
@@ -66,6 +91,20 @@ Blackbox tests import the package with `@<pkg>` and exercise the public API. Use
 ### Package-owned interners, not globals
 
 Wherever string interning is used (compiler symbol table, `Chunk` constant pool, `Shape` keys), each consumer owns its own `@util.Interner`. No project-wide singleton. Rationale: milestone boundaries stay clean and there is no cross-context aliasing when a `Chunk` is serialized / disassembled in isolation.
+
+### `pub(all)` for cross-package enums that need pattern matching
+
+Types like `JSValue` are consumed by every layer (VM, compiler, builtins, tests) via `match`. `pub enum` only exports the type name — external callers cannot pattern-match on variants. Use `pub(all) enum` when variants are part of the API.
+
+Cross-milestone contract: adding a new variant IS a breaking change under `pub(all)`. This is intentional — the parent task's contract already says "JSValue variants must be additive only, never rename or remove", and `pub(all)` makes the contract compiler-enforced. If a new variant is added, downstream `match` sites must be updated in the same commit.
+
+### Struct references vs `Ref[T]`
+
+MoonBit structs are already reference-typed: passing a struct binding to a function or storing it as a field shares the same underlying storage; mutating any `mut` field is visible through every alias. Do **not** wrap a struct in `Ref[T]` for "shared mutability" — it adds an extra `.val` indirection with no semantic gain.
+
+When "handle to shared mutable X" is needed, declare `pub typealias X as XRef` for documentation purposes and use bare `X` at call sites. Add setters (`X::set_field(self, v)`) for cross-package field mutation because `mut` fields are not cross-package assignable.
+
+**Source**: M1 Step 2 (`src/value/object.mbt`). Recorded 2026-09-10.
 
 ---
 

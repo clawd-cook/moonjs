@@ -33,7 +33,7 @@ Test harness 独立位于 `tests/quickjs_harness/`，依赖顶层 `moonjs`。
 ### 2.1 JSValue
 
 ```moonbit
-pub enum JSValue {
+pub(all) enum JSValue {
   Undefined
   Null
   Bool(Bool)
@@ -41,8 +41,12 @@ pub enum JSValue {
   Number(Double)
   Str(String)
   Object(ObjectRef)
-} derive(Eq, @debug.Debug)
+} derive(@debug.Debug)
+pub impl Eq for JSValue      // 手动实现: Object 用 physical_equal（身份相等），其余按 variant 结构相等
 ```
+
+- 用 `pub(all) enum` 而非 `pub enum`：外部包（compiler / vm / builtins）必须能直接 pattern-match variant constructor 与构造 variant，`pub enum` 只暴露类型名不暴露 constructor。
+- `Eq` 不能 derive：JS 语义要求 `{} === {}` 为 false（对象身份相等），所以 `JSValue::Object(o1) == JSValue::Object(o2)` 走 `physical_equal(o1, o2)`；其它 variant 结构相等。手写 `impl Eq for JSValue`。
 
 - `Int32` 表示范围：`Int.min_value ..= Int.max_value`（32-bit signed）。任何算术若结果超出该范围，或涉及非整数，一律走 `Number(Double)`。
 - 位运算（`|` `&` `^` `~` `<<` `>>` `>>>`）遵循 ES `ToInt32` / `ToUint32`：先把两侧转 `Int32`，做位运算，返回 `Int32`（`>>>` 语义上是 `Uint32`，但值仍能存进 `Int32` 的位模式；调用方按 `>>>` 时 reinterpret 为 `Uint`）。
@@ -53,7 +57,7 @@ pub enum JSValue {
 ```moonbit
 pub struct Object {
   mut shape: ShapeRef
-  slots: Array[JSValue]                // 与 shape.slot_count 对齐；grow 时同步 shape 换代
+  slots: Array[JSValue]                // 与 shape.keys_ordered.length 对齐；grow 时同步
   mut proto: JSValue                   // Object(_) 或 Null
   mut extensible: Bool
   // M2+ 追加: private_slots, class_id, ...
@@ -62,17 +66,21 @@ pub struct Object {
 pub struct Shape {
   props: @hashmap.HashMap[String, PropMeta]   // MoonBit stdlib hashmap
   keys_ordered: Array[String]                  // 插入顺序
-  // M6 优化: parent: ShapeRef?, transitions: HashMap[Key, ShapeRef]
+  // M6 优化: parent: ShapeRef?, transitions: HashMap[Key, ShapeRef]  // M1 不实现
 }
 
 pub struct PropMeta {
   slot_idx: Int
-  attrs: UInt8                          // bit0=writable, bit1=enumerable, bit2=configurable, bit3=accessor(M3 起)
+  attrs: Byte                           // bit0=writable, bit1=enumerable, bit2=configurable, bit3=accessor(M3 起)
 }
 
-pub type ObjectRef = Ref[Object]         // heap-shared, mutable
-pub type ShapeRef = Ref[Shape]
+pub typealias Object as ObjectRef       // MoonBit struct 已具备指针身份语义: mut 字段跨别名共享
+pub typealias Shape as ShapeRef         // 无需再包一层 @ref.Ref
 ```
+
+- MoonBit 结构体默认按引用传递，`mut` 字段跨别名共享——不需要再包 `Ref[T]`。design 早期草案写 `Ref[Object]` 是 C-思维遗物，`typealias` 已足够。
+- `PropMeta.attrs` 是 `Byte`（MoonBit 里 8-bit unsigned 就叫 `Byte`，没有 `UInt8`）。位掩码常量 `ATTR_WRITABLE=0x01 / ATTR_ENUMERABLE=0x02 / ATTR_CONFIGURABLE=0x04 / ATTR_ACCESSOR=0x08 / ATTR_DEFAULT_DATA=0x07`。
+- Cross-package mutation：MoonBit 里 `mut` 字段不能跨包直接赋值，需要在 `value` 包内提供 setter。M1 提供 `Object::set_proto` / `Object::set_shape` / `Object::prevent_extensions`。所有 slot 修改仍走 `Object::add_property` / `Object::set_own` 高层 API，VM 层不直接触碰 `slots`。
 
 - **M1 简化**：每个 object 一个独立 Shape（不做 shape 共享 / 转移树）。add property = shape.props.set + keys_ordered.push + object.slots.push。这样"多 object 相同外形"的内存优化留给 M6。
 - **原型链查找**：`fn get_property(obj: ObjectRef, key: String) -> JSValue`：从 `obj` 起顺 `proto` 链找，miss 到 `Null` 返 `Undefined`；每一跳都是 `shape.props.get(key)`。

@@ -1,11 +1,85 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "heyq02/moonjs/src/value"
 
+import {
+  "heyq02/moonjs/src/util",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/hashmap",
+}
+
 // Values
+pub const ATTR_ACCESSOR : Byte = 0x08
+
+pub const ATTR_CONFIGURABLE : Byte = 0x04
+
+pub const ATTR_DEFAULT_DATA : Byte = 0x07
+
+pub const ATTR_ENUMERABLE : Byte = 0x02
+
+pub const ATTR_WRITABLE : Byte = 0x01
 
 // Errors
 
 // Types and methods
+pub struct JSException {
+  value : JSValue
+  stack : Array[StackFrameInfo]
+} derive(@debug.Debug)
+pub fn JSException::new(JSValue, Array[StackFrameInfo]) -> Self
+
+pub(all) enum JSValue {
+  Undefined
+  Null
+  Bool(Bool)
+  Int32(Int)
+  Number(Double)
+  Str(String)
+  Object(Object)
+} derive(@debug.Debug)
+pub impl Eq for JSValue
+
+#alias(ObjectRef)
+pub struct Object {
+  mut shape : Shape
+  slots : Array[JSValue]
+  mut proto : JSValue
+  mut extensible : Bool
+} derive(@debug.Debug)
+pub fn Object::add_property(Self, String, JSValue, Byte) -> Unit
+pub fn Object::get_own(Self, String) -> JSValue?
+pub fn Object::get_property(Self, String) -> JSValue
+pub fn Object::has_own(Self, String) -> Bool
+pub fn Object::has_property(Self, String) -> Bool
+pub fn Object::new(Shape, JSValue) -> Self
+pub fn Object::prevent_extensions(Self) -> Unit
+pub fn Object::set_own(Self, String, JSValue) -> Bool
+pub fn Object::set_proto(Self, JSValue) -> Unit
+pub fn Object::set_shape(Self, Shape) -> Unit
+
+pub struct PropMeta {
+  slot_idx : Int
+  attrs : Byte
+} derive(Eq, @debug.Debug)
+pub fn PropMeta::data(Int) -> Self
+pub fn PropMeta::is_accessor(Self) -> Bool
+pub fn PropMeta::is_configurable(Self) -> Bool
+pub fn PropMeta::is_enumerable(Self) -> Bool
+pub fn PropMeta::is_writable(Self) -> Bool
+pub fn PropMeta::new(Int, Byte) -> Self
+
+#alias(ShapeRef)
+pub struct Shape {
+  props : @hashmap.HashMap[String, PropMeta]
+  keys_ordered : Array[String]
+} derive(@debug.Debug)
+pub fn Shape::new() -> Self
+
+pub struct StackFrameInfo {
+  chunk_name : String
+  filename : String
+  loc : @util.SourceLoc
+} derive(Eq, @debug.Debug)
+pub fn StackFrameInfo::new(String, String, @util.SourceLoc) -> Self
 
 // Type aliases
 

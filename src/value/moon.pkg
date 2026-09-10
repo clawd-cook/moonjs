@@ -1,2 +1,12 @@
 // Value package: JSValue enum, Object shape, property descriptor.
 // Owner milestone: M1 (primitives + Object base). New variants added by later milestones (Sym in M3, BigInt in M4) must be additive.
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/hashmap",
+  "heyq02/moonjs/src/util",
+}
+
+import {
+  "moonbitlang/core/test",
+} for "test"
