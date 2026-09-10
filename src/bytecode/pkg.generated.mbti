@@ -171,6 +171,7 @@ pub struct Chunk {
   upvalue_slots : Array[UpvalueSlotDecl]
   nested_chunks : Array[Chunk]
   mut is_strict : Bool
+  mut self_binding_slot : Int
 } derive(@debug.Debug)
 pub fn Chunk::add_const(Self, @value.JSValue) -> Int
 pub fn Chunk::add_nested(Self, Self) -> Int
@@ -184,6 +185,7 @@ pub fn Chunk::new(String, String, Int) -> Self
 pub fn Chunk::patch_jump(Self, Int, Int) -> Unit
 pub fn Chunk::read_operand_i24(Self, Int) -> (Int, Int)
 pub fn Chunk::read_operand_u24(Self, Int) -> (UInt, Int)
+pub fn Chunk::set_self_binding_slot(Self, Int) -> Unit
 pub fn Chunk::set_strict(Self, Bool) -> Unit
 
 pub struct DecodedInstr {

@@ -21,6 +21,18 @@ pub const ATTR_WRITABLE : Byte = 0x01
 // Errors
 
 // Types and methods
+pub struct Function {
+  chunk_id : Int
+  upvalues : Array[Upvalue]
+  name : String
+  is_constructor : Bool
+} derive(@debug.Debug)
+pub fn Function::chunk_id(Self) -> Int
+pub fn Function::is_constructor(Self) -> Bool
+pub fn Function::name(Self) -> String
+pub fn Function::new(Int, Array[Upvalue], String, Bool) -> Self
+pub fn Function::upvalues(Self) -> Array[Upvalue]
+
 pub struct JSException {
   value : JSValue
   stack : Array[StackFrameInfo]
@@ -35,6 +47,7 @@ pub(all) enum JSValue {
   Number(Double)
   Str(String)
   Object(Object)
+  Function(Function)
 } derive(@debug.Debug)
 pub impl Eq for JSValue
 
@@ -80,6 +93,13 @@ pub struct StackFrameInfo {
   loc : @util.SourceLoc
 } derive(Eq, @debug.Debug)
 pub fn StackFrameInfo::new(String, String, @util.SourceLoc) -> Self
+
+pub struct Upvalue {
+  mut value : JSValue
+} derive(@debug.Debug)
+pub fn Upvalue::get(Self) -> JSValue
+pub fn Upvalue::new(JSValue) -> Self
+pub fn Upvalue::set(Self, JSValue) -> Unit
 
 // Type aliases
 

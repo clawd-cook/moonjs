@@ -232,6 +232,7 @@ fn describe_value(v : @value.JSValue) -> String {
     Number(d) => "Number(" + d.to_string() + ")"
     Str(s) => "\"" + s + "\""
     Object(_) => "[object]"
+    Function(f) => "[function " + f.name() + "]"
   }
 }
 
@@ -702,4 +703,245 @@ test "ternary" {
   expect_int32("true ? 1 : 2", 1)
   expect_int32("false ? 1 : 2", 2)
   expect_string("(1 < 2) ? \"yes\" : \"no\"", "yes")
+}
+
+// ---------------------------------------------------------------------------
+// Step 8b1 — objects, arrays, functions
+// ---------------------------------------------------------------------------
+
+///|
+test "object literal: simple" {
+  expect_int32("var o = {a: 1, b: 2}; o.a + o.b", 3)
+}
+
+///|
+test "object literal: string keys and access" {
+  expect_string("var o = {name: \"moonjs\"}; o.name", "moonjs")
+  expect_int32("var o = {x: 10}; o[\"x\"]", 10)
+}
+
+///|
+test "object literal: mixed types" {
+  expect_bool("var o = {b: true, s: \"hi\"}; o.b", true)
+  expect_string("var o = {b: true, s: \"hi\"}; o.s", "hi")
+}
+
+///|
+test "object: set property" {
+  expect_int32("var o = {}; o.a = 42; o.a", 42)
+}
+
+///|
+test "object: nested property access" {
+  expect_int32("var o = {inner: {x: 7}}; o.inner.x", 7)
+}
+
+///|
+test "object: `in` operator on object" {
+  expect_bool("var o = {a: 1}; \"a\" in o", true)
+  expect_bool("var o = {a: 1}; \"b\" in o", false)
+}
+
+///|
+test "object: delete property" {
+  expect_string("var o = {a: 1, b: 2}; delete o.a; typeof o.a", "undefined")
+  expect_int32("var o = {a: 1, b: 2}; delete o.a; o.b", 2)
+}
+
+///|
+test "array literal: simple" {
+  expect_int32("var a = [1, 2, 3]; a[0] + a[2]", 4)
+}
+
+///|
+test "array: length" {
+  expect_int32("[1, 2, 3].length", 3)
+}
+
+///|
+test "array: index assignment" {
+  expect_int32("var a = [1, 2, 3]; a[0] = 42; a[0]", 42)
+}
+
+///|
+test "string: length" {
+  expect_int32("\"abc\".length", 3)
+  expect_int32("\"\".length", 0)
+  expect_int32("\"hello\".length", 5)
+}
+
+///|
+test "string: char at index" {
+  expect_string("\"abc\"[1]", "b")
+  expect_string("\"hello\"[0]", "h")
+}
+
+///|
+test "function: basic call returning value" {
+  expect_int32("function f() { return 1; } f()", 1)
+}
+
+///|
+test "function: call with arguments" {
+  expect_int32("function add(a, b) { return a + b; } add(2, 3)", 5)
+}
+
+///|
+test "function: call with too few args (undefined)" {
+  expect_string("function f(a, b) { return typeof b; } f(1)", "undefined")
+}
+
+///|
+test "function: return without value yields undefined" {
+  expect_string("function f() { return; } typeof f()", "undefined")
+}
+
+///|
+test "function: fallthrough yields undefined" {
+  expect_string("function f() { var x = 1; } typeof f()", "undefined")
+}
+
+///|
+test "function: recursion (fib)" {
+  // From test_closure3 body.
+  expect_int32(
+    "function fib(n) { if (n <= 0) return 0; else if (n == 1) return 1; else return fib(n - 1) + fib(n - 2); } fib(6)",
+    8,
+  )
+}
+
+///|
+test "function: typeof function" {
+  expect_string("function f() {} typeof f", "function")
+}
+
+///|
+test "function: assignment as first-class value" {
+  expect_int32("function f() { return 42; } var g = f; g()", 42)
+}
+
+///|
+test "closure: read outer scope" {
+  expect_int32(
+    "function make() { var x = 10; return function() { return x; }; } make()()",
+    10,
+  )
+}
+
+///|
+test "closure: mutate outer scope (test_closure1 pattern)" {
+  expect_int32(
+    "function make() { var x = 0; return { get: function(){ return x; }, set: function(v){ x = v; } }; } var m = make(); m.set(5); m.get()",
+    5,
+  )
+}
+
+///|
+test "closure: multiple closures share same cell" {
+  // Two closures over the same outer binding should see each other's writes.
+  expect_int32(
+    "function make() { var x = 1; var a = function() { x = x + 1; }; var b = function() { return x; }; a(); a(); return b(); } make()",
+    3,
+  )
+}
+
+///|
+test "closure: named function expression self-recursion (test_closure2 pattern)" {
+  expect_int32(
+    "var expr_func = function myfunc1(n) { function myfunc2(n) { return myfunc1(n - 1); } if (n == 0) return 0; else return myfunc2(n); }; expr_func(1)",
+    0,
+  )
+}
+
+///|
+test "closure: named FnExpr factorial" {
+  expect_int32(
+    "var f = function fact(n) { return n <= 1 ? 1 : n * fact(n - 1); }; f(5)", 120,
+  )
+}
+
+///|
+test "method call: this binding" {
+  expect_int32(
+    "var o = {x: 10, get: function() { return this.x; }}; o.get()", 10,
+  )
+}
+
+///|
+test "method call: this binding via bracket notation" {
+  expect_int32(
+    "var o = {x: 7, m: function() { return this.x; }}; o[\"m\"]()", 7,
+  )
+}
+
+///|
+test "method call: mutation of receiver" {
+  expect_int32(
+    "var o = {x: 1, inc: function() { this.x = this.x + 1; }}; o.inc(); o.inc(); o.x",
+    3,
+  )
+}
+
+///|
+test "constructor: new with property" {
+  // From test_op2's `function F(x) { this.x = x; } b = new F(2);`.
+  expect_int32("function F(x) { this.x = x; } var b = new F(42); b.x", 42)
+}
+
+///|
+test "constructor: return value non-object ignored" {
+  expect_int32(
+    "function F() { this.a = 1; return 42; } var b = new F(); b.a", 1,
+  )
+}
+
+///|
+test "constructor: return value object replaces this" {
+  // Explicit object return overrides `this` (matches JS spec).
+  expect_int32(
+    "function F() { this.a = 1; return {b: 99}; } var b = new F(); b.b", 99,
+  )
+}
+
+///|
+test "call non-function throws TypeError" {
+  let chunk = compile_source("var x = 5; x();")
+  let engine = @vm.Engine::new()
+  match engine.run_chunk(chunk) {
+    Ok(_) => fail("expected TypeError")
+    Err(e) =>
+      match e.value {
+        Object(o) =>
+          match o.get_property("name") {
+            Str(s) => assert_eq(s, "TypeError")
+            _ => fail("error object missing .name")
+          }
+        _ => fail("expected Error object")
+      }
+  }
+}
+
+///|
+test "test_op2 fragment: `in` operator" {
+  expect_bool("var a = {x: 2}; \"x\" in a", true)
+  expect_bool("var a = {x: 2}; \"y\" in a", false)
+}
+
+///|
+test "closure: stack trace records both frames on throw" {
+  // Nested function; inner throws; caller chain gives 2 frames.
+  let chunk = compile_source(
+    "function inner() { throw \"boom\"; } function outer() { inner(); } outer();",
+  )
+  let engine = @vm.Engine::new()
+  match engine.run_chunk(chunk) {
+    Ok(_) => fail("expected throw")
+    Err(e) =>
+      // Expect at least three frames: inner, outer, <top>.
+      if e.stack.length() < 2 {
+        fail(
+          "expected multiple stack frames, got " + e.stack.length().to_string(),
+        )
+      }
+  }
 }

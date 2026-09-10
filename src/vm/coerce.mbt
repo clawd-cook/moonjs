@@ -20,7 +20,8 @@
 
 ///|
 /// ES `ToBoolean(argument)`. See ECMA-262 7.1.2. Only the primitive branches
-/// arise in M1 AC — an `Object(_)` value is always truthy per JS.
+/// arise in M1 AC — an `Object(_)` / `Function(_)` value is always truthy
+/// per JS.
 fn to_boolean(v : @value.JSValue) -> Bool {
   match v {
     Undefined => false
@@ -40,6 +41,7 @@ fn to_boolean(v : @value.JSValue) -> Bool {
       }
     Str(s) => s.length() > 0
     Object(_) => true
+    Function(_) => true
   }
 }
 
@@ -61,6 +63,8 @@ fn to_number(v : @value.JSValue) -> Double {
     // Object → in real JS: ToPrimitive(hint Number) then ToNumber.
     // For M1 without method dispatch, coerce to NaN. Documented deviation.
     Object(_) => @double.not_a_number
+    // Function → similarly NaN under M1's no-method-dispatch policy.
+    Function(_) => @double.not_a_number
   }
 }
 
@@ -199,6 +203,9 @@ fn to_string(v : @value.JSValue) -> String {
     // M1: Object → "[object Object]" stub. Real toString method dispatch
     // arrives in Step 9 with Object.prototype.
     Object(_) => "[object Object]"
+    // Function → source-form stub. `Function.prototype.toString` in real
+    // JS returns the function's source; for M1 we return a synthetic form.
+    Function(f) => "function " + f.name() + "() { [native code] }"
   }
 }
 

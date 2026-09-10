@@ -597,10 +597,10 @@ fn compile_function_template(
         Some(_) => ()
         None => {
           // For a named function expression, the name binds to the function
-          // value. The VM's `new_closure` handling in Step 8 will need to
-          // pre-populate this slot; for now we simply declare the slot so
-          // resolution works, and rely on Step 8 to populate.
-          let _ = fc.declare_local(fn_name, Const)
+          // value. The VM populates this slot at call time when it sees the
+          // chunk's `self_binding_slot` field set.
+          let slot = fc.declare_local(fn_name, Const)
+          child.set_self_binding_slot(slot)
         }
       }
     None => ()

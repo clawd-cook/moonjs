@@ -11,15 +11,9 @@ import {
 // Errors
 
 // Types and methods
-pub struct ClosedUpvalue {
-  mut value : @value.JSValue
-}
-pub fn ClosedUpvalue::get(Self) -> @value.JSValue
-pub fn ClosedUpvalue::new(@value.JSValue) -> Self
-pub fn ClosedUpvalue::set(Self, @value.JSValue) -> Unit
-
 pub struct Engine {
   globals : @value.Object
+  chunk_registry : Array[@bytecode.Chunk]
 }
 pub fn Engine::new() -> Self
 pub fn Engine::run_chunk(Self, @bytecode.Chunk) -> Result[@value.JSValue, @value.JSException]
@@ -27,8 +21,8 @@ pub fn Engine::run_chunk(Self, @bytecode.Chunk) -> Result[@value.JSValue, @value
 pub struct Frame {
   mut pc : Int
   chunk : @bytecode.Chunk
-  locals : Array[@value.JSValue]
-  upvalues : Array[UpvalueRef]
+  locals : Array[@value.Upvalue]
+  upvalues : Array[@value.Upvalue]
   operand_stack : Array[@value.JSValue]
   try_stack : Array[TryHandler]
   this_val : @value.JSValue
@@ -42,11 +36,6 @@ pub struct TryHandler {
   operand_depth : Int
 }
 pub fn TryHandler::new(Int, Int, Int) -> Self
-
-pub(all) enum UpvalueRef {
-  OnStack(Frame, Int)
-  Closed(ClosedUpvalue)
-}
 
 // Type aliases
 

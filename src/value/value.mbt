@@ -27,6 +27,11 @@
 /// match JS `===` semantics for objects. `Int32` and `Number` are treated as
 /// distinct variants (never equal to each other) at this layer — the VM will
 /// add ES `Abstract Equality` and `Strict Equality` conversions in Step 8.
+///
+/// The `Function(Function)` variant (added in M1 Step 8b1) is treated like
+/// `Object` for equality: two distinct `Function` values with identical
+/// chunk / upvalues are NOT equal — only same-reference is equal — matching
+/// JS `===` on function values.
 pub(all) enum JSValue {
   Undefined
   Null
@@ -35,6 +40,7 @@ pub(all) enum JSValue {
   Number(Double)
   Str(String)
   Object(ObjectRef)
+  Function(Function)
 } derive(@debug.Debug)
 
 ///|
@@ -51,6 +57,7 @@ pub impl Eq for JSValue with fn equal(self : JSValue, other : JSValue) -> Bool {
     (Number(a), Number(b)) => a == b
     (Str(a), Str(b)) => a == b
     (Object(a), Object(b)) => physical_equal(a, b)
+    (Function(a), Function(b)) => physical_equal(a, b)
     _ => false
   }
 }

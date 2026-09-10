@@ -47,6 +47,12 @@
 ///   design.md §4.4 and avoids a special-case in the pool.
 /// - `is_strict`: reserved for M2 strict-mode semantics; always `false` in
 ///   M1.
+/// - `self_binding_slot`: for a named function expression, the local slot
+///   that the VM should populate with the newly-created `Function` value at
+///   call time so `function f() { ... f() ... }` sees `f` inside the body.
+///   `-1` when the function has no self-binding (top-level scripts,
+///   anonymous function expressions, `function foo` declarations — those
+///   bind the name through their enclosing scope's mechanism, not a slot).
 pub struct Chunk {
   code : Array[UInt]
   const_pool : Array[@value.JSValue]
@@ -58,6 +64,7 @@ pub struct Chunk {
   upvalue_slots : Array[UpvalueSlotDecl]
   nested_chunks : Array[Chunk]
   mut is_strict : Bool
+  mut self_binding_slot : Int
 } derive(@debug.Debug)
 
 ///|
@@ -83,6 +90,7 @@ pub fn Chunk::new(name : String, filename : String, param_count : Int) -> Chunk 
     upvalue_slots: [],
     nested_chunks: [],
     is_strict: false,
+    self_binding_slot: -1,
   }
 }
 
@@ -101,6 +109,18 @@ pub fn Chunk::alloc_local(self : Chunk) -> Int {
 /// a place to write.
 pub fn Chunk::set_strict(self : Chunk, is_strict : Bool) -> Unit {
   self.is_strict = is_strict
+}
+
+///|
+/// Record which local slot the VM should populate with the newly-created
+/// `Function` at call time. Emitted by the compiler for named function
+/// expressions: the body's reference to its own name resolves to this local
+/// slot, and the VM writes the function reference into the slot when a
+/// frame for the chunk is created (see design.md §8.1 handoff notes).
+///
+/// Pass `-1` (the default from `Chunk::new`) to indicate no self-binding.
+pub fn Chunk::set_self_binding_slot(self : Chunk, slot : Int) -> Unit {
+  self.self_binding_slot = slot
 }
 
 ///|
