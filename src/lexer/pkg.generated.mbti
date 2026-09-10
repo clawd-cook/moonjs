@@ -1,11 +1,145 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "heyq02/moonjs/src/lexer"
 
+import {
+  "heyq02/moonjs/src/util",
+  "moonbitlang/core/debug",
+}
+
 // Values
 
 // Errors
+pub(all) suberror LexError {
+  LexError(msg~ : String, loc~ : @util.SourceLoc)
+} derive(@debug.Debug)
 
 // Types and methods
+pub(all) enum Keyword {
+  Break_
+  Case_
+  Catch_
+  Class_
+  Const_
+  Continue_
+  Debugger_
+  Default_
+  Delete_
+  Do_
+  Else_
+  Export_
+  Extends_
+  Finally_
+  For_
+  Function_
+  If_
+  Import_
+  In_
+  Instanceof_
+  Let_
+  New_
+  Null_
+  Return_
+  Super_
+  Switch_
+  This_
+  Throw_
+  True_
+  False_
+  Try_
+  Typeof_
+  Var_
+  Void_
+  While_
+  With_
+  Yield_
+  Enum_
+} derive(Eq, @debug.Debug)
+
+pub struct Lexer {
+  // private fields
+}
+pub fn Lexer::filename_of(Self) -> String
+pub fn Lexer::lex_next(Self, Bool) -> Result[Token, LexError]
+pub fn Lexer::new(String, String) -> Self
+
+pub struct Token {
+  kind : TokenKind
+  span : @util.SourceSpan
+} derive(@debug.Debug)
+pub fn Token::new(TokenKind, @util.SourceSpan) -> Self
+
+pub(all) enum TokenKind {
+  NumberTok(value~ : Double, is_int~ : Bool)
+  StringTok(value~ : String)
+  TemplateHeadTok(cooked~ : String, raw~ : String)
+  TemplateMiddleTok(cooked~ : String, raw~ : String)
+  TemplateTailTok(cooked~ : String, raw~ : String)
+  TemplateNoSubTok(cooked~ : String, raw~ : String)
+  RegExpTok(pattern~ : String, flags~ : String)
+  IdentifierTok(name~ : String)
+  KeywordTok(kind~ : Keyword)
+  PrivateIdentTok(name~ : String)
+  LParen
+  RParen
+  LBrace
+  RBrace
+  LBracket
+  RBracket
+  Comma
+  Semi
+  Colon
+  Dot
+  Ellipsis
+  Question
+  QuestionDot
+  QuestionQuestion
+  Arrow
+  Plus
+  Minus
+  Star
+  StarStar
+  Slash
+  Percent
+  Amp
+  Pipe
+  Caret
+  Tilde
+  Bang
+  Lt
+  Gt
+  LtEq
+  GtEq
+  EqEq
+  EqEqEq
+  BangEq
+  BangEqEq
+  EqTok
+  PlusEq
+  MinusEq
+  StarEq
+  SlashEq
+  PercentEq
+  StarStarEq
+  LtLtEq
+  GtGtEq
+  GtGtGtEq
+  AmpEq
+  PipeEq
+  CaretEq
+  AmpAmp
+  PipePipe
+  AmpAmpEq
+  PipePipeEq
+  QuestionQuestionEq
+  LtLt
+  GtGt
+  GtGtGt
+  PlusPlus
+  MinusMinus
+  At
+  Hash
+  Eof
+} derive(@debug.Debug)
 
 // Type aliases
 

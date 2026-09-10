@@ -1,2 +1,17 @@
 // Lexer package: tokenizes JavaScript source into a token stream.
-// Owner milestone: M1.
+// Owner milestone: M1 (Step 5).
+//
+// The lexer is context-sensitive at two places: the `/` ambiguity (regex vs
+// divide) is resolved by an `allow_regex` hint passed by the parser, and
+// template-literal `${...}` interpolation switches back to expression mode
+// via a small nesting stack owned by the lexer.
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/string",
+  "heyq02/moonjs/src/util",
+}
+
+import {
+  "moonbitlang/core/test",
+} for "test"

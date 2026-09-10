@@ -168,6 +168,20 @@ When "handle to shared mutable X" is needed, declare `pub typealias X as XRef` f
 
 **Source**: M1 Step 2 (`src/value/object.mbt`). Recorded 2026-09-10.
 
+### `moonbitlang/core` has no file-I/O in current toolchain
+
+`moonbitlang/core/fs` does not exist. `moonbitlang/core/env` only exposes CLI args / env vars / RNG. Reading a file from a test or CLI requires C FFI (`moonbit_fopen_ffi`) — which we cannot use, since **the project is pure MoonBit / no C FFI** (parent PRD constraint N1).
+
+**Convention**: when a test or program needs source code from a file (e.g. `quickjs/tests/test_language.js` for lex/parse-through), do NOT introduce FFI. Instead:
+
+1. **For unit tests**: embed the fixture as a `#|` raw multi-line string constant in the test file. This is what `lexer_test.mbt` does with `test_language.js` snippets.
+2. **For the M1 harness runner** (Step 11): use a build-time asset embed — write a small MoonBit source generator (`moon build --pre-build` or similar) that reads the `.js` files at build time and emits a MoonBit source file exposing them as `let TEST_LANGUAGE_JS : String = #|...`.
+3. **For M5's `cmd/moonjs run <file.js>`**: when a CLI file argument is needed, this becomes a real problem. Options at that point: (a) petition MoonBit stdlib to add `fs`; (b) build a minimal sys-binding without C FFI (WASI-native syscall style if supported); (c) inline the harness fixtures at build time and offer no arbitrary-file CLI. Decision deferred to M5 planning.
+
+**Source**: M1 Step 5 (`src/lexer`) attempted full-file lex-through; MoonBit toolchain 0.1.20260904 doesn't provide `@fs.read_file`. Recorded 2026-09-10.
+
+---
+
 ---
 
 ## Testing Requirements
