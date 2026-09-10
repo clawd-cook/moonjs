@@ -822,12 +822,12 @@ test "token span records start and end column" {
       panic()
     }
   }
-  // Line is 1, 1-based; column is 0-based.
+  // Line and column are both 1-based (see util.mbt / lexer.mbt col()).
   @test.assert_eq(a.span.start.line, (1 : UInt16))
-  @test.assert_eq(a.span.start.col, (0 : UInt16))
-  @test.assert_eq(a.span.end.col, (3 : UInt16))
-  @test.assert_eq(b.span.start.col, (4 : UInt16))
-  @test.assert_eq(b.span.end.col, (7 : UInt16))
+  @test.assert_eq(a.span.start.col, (1 : UInt16))
+  @test.assert_eq(a.span.end.col, (4 : UInt16))
+  @test.assert_eq(b.span.start.col, (5 : UInt16))
+  @test.assert_eq(b.span.end.col, (8 : UInt16))
 }
 
 ///|
@@ -842,7 +842,7 @@ test "line tracking increments on newline" {
     }
   }
   @test.assert_eq(b.span.start.line, (2 : UInt16))
-  @test.assert_eq(b.span.start.col, (0 : UInt16))
+  @test.assert_eq(b.span.start.col, (1 : UInt16))
 }
 
 ///|

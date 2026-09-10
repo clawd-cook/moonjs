@@ -280,16 +280,12 @@ fn Lexer::lex_number_decimal(
 
 ///|
 /// Recover the byte offset from a `SourceLoc` snapshotted earlier during this
-/// lexer's scan. `start_loc.col` is `pos - line_start` at the moment of
-/// capture, and lines haven't wrapped through the number (numbers do not
-/// contain line terminators), so we can rebuild the offset without keeping a
-/// separate int.
+/// lexer's scan. `start_loc.col` is 1-based (see `Lexer::col`); the offset is
+/// `line_start + (col - 1)`. Numbers don't cross line terminators, so the
+/// current `line_start` still equals the one at capture time.
 fn start_loc_offset(l : Lexer, start : @util.SourceLoc) -> Int {
-  // Convert UInt16 -> Int.
   let col = start.col.to_int()
-  // Since a number literal never crosses a line, `line_start` at the time of
-  // capture equals the current `line_start`. Callers guarantee this.
-  l.line_start + col
+  l.line_start + col - 1
 }
 
 ///|

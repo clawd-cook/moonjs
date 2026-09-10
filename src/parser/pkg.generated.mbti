@@ -1,11 +1,25 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "heyq02/moonjs/src/parser"
 
+import {
+  "heyq02/moonjs/src/ast",
+  "heyq02/moonjs/src/util",
+  "moonbitlang/core/debug",
+}
+
 // Values
 
 // Errors
+pub(all) suberror ParseError {
+  ParseError(msg~ : String, loc~ : @util.SourceLoc)
+} derive(@debug.Debug)
 
 // Types and methods
+pub struct Parser {
+  // private fields
+}
+pub fn Parser::new(String, String) -> Result[Self, ParseError]
+pub fn Parser::parse_script(Self) -> Result[@ast.Program, ParseError]
 
 // Type aliases
 

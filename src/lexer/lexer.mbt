@@ -77,10 +77,12 @@ fn Lexer::peek(self : Lexer, offset : Int) -> Int {
 }
 
 ///|
-/// Current column (0-based). The lexer feeds this into `SourceLoc::new`,
-/// which narrows to `UInt16`.
+/// Current column, 1-based, matching `SourceLoc`'s convention (see
+/// `src/util/util.mbt`). `parse-error-column.js` (an M1 AC gate) asserts
+/// 1-based columns for error locations, and `Error.stack` renders them the
+/// same way.
 fn Lexer::col(self : Lexer) -> Int {
-  self.pos - self.line_start
+  self.pos - self.line_start + 1
 }
 
 ///|

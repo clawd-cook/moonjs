@@ -1,2 +1,13 @@
 // Parser package: consumes tokens from src/lexer and produces an AST defined in src/ast.
 // Owner milestone: M1 (expression + core statements), extended in M2 (class/generator/etc.).
+
+import {
+  "moonbitlang/core/debug",
+  "heyq02/moonjs/src/util",
+  "heyq02/moonjs/src/lexer",
+  "heyq02/moonjs/src/ast",
+}
+
+import {
+  "moonbitlang/core/test",
+} for "test"
