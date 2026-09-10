@@ -1,2 +1,16 @@
 // VM package: main interpreter loop, Frame layout, operand/try-catch stacks, source location table.
 // Owner milestone: M1 (loop + eh + closures), M2 (generator suspension), M4 (await hookpoint into microtask queue).
+
+import {
+  "moonbitlang/core/double",
+  "moonbitlang/core/math",
+  "moonbitlang/core/string",
+  "heyq02/moonjs/src/util",
+  "heyq02/moonjs/src/value",
+  "heyq02/moonjs/src/bytecode",
+}
+
+import {
+  "heyq02/moonjs/src/parser",
+  "heyq02/moonjs/src/compiler",
+} for "test"

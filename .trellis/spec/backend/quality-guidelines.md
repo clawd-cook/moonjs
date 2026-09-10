@@ -200,6 +200,67 @@ When "handle to shared mutable X" is needed, declare `pub typealias X as XRef` f
 
 ---
 
+### MoonBit toolchain gotchas (Step 8a batch)
+
+Toolchain quirks that trip newcomers to MoonBit 0.1.20260904. Each shows a concrete "wrong shape" → "right shape". Recorded 2026-09-11.
+
+**1. Deprecated Int shift methods — use `<<` / `>>` operators.**
+
+```moonbit
+// Wrong: Int.lsl, Int.lsr, Int.asr are deprecated.
+let shifted = x.lsl(3)
+
+// Right: operator form for signed shifts.
+let shifted = x << 3
+```
+
+For **logical (unsigned) right shift on an `Int`**, MoonBit's `>>` on `Int` is arithmetic (sign-extending). Round-trip through `UInt`:
+
+```moonbit
+let logical_shr = (x.reinterpret_as_uint() >> n).reinterpret_as_int()
+```
+
+This is what `js_ushr` in `src/vm/arithmetic.mbt` does. `reinterpret_as_uint` / `reinterpret_as_int` are free bit-pattern casts.
+
+**2. `try? expr` is deprecated. Use `try expr catch { ... }` or the `catch { }` postfix.**
+
+```moonbit
+// Wrong.
+let r = try? some_fn()
+
+// Right.
+let r = try some_fn() catch {
+  e => default_value
+}
+// Or postfix form (used in coerce.mbt for @string.parse_double).
+let d = @string.parse_double(view) catch { _ => @double.not_a_number }
+```
+
+**3. String slicing / trimming return views, not owned strings.**
+
+`String::trim()` and `s[i:j]` return `@string.View`. To go back to `String`, call `.to_owned()`. Passing a `View` where a `String` is expected is a type error, not a coercion. Old helpers `String::trim_space()` / `String::substring(i, j)` are deprecated — use `.trim().to_owned()` / `s[i:j].to_owned()`.
+
+**4. `String::at(i)` returns `UInt16` (UTF-16 code unit).**
+
+This aligns with JS string semantics (see design.md §5.1 lexer notes). To compare against an ASCII literal like `'0'`, take the code-unit-as-Int via `.to_uint().reinterpret_as_int()` (see `charcode_at` in `src/vm/coerce.mbt`) — do NOT call `.to_int()` directly on a `UInt16`, which is a warning-under-`--deny-warn`.
+
+**5. `unused_field` / `unused_constructor` are `--deny-warn` errors.**
+
+If a struct has a `mut` field or a variant constructor that is defined but not used anywhere in the compile unit, `--deny-warn` treats it as an error. Two mitigations, in order of preference:
+
+- **Add real users** — usually the intended fix. Adding a `pub fn Foo::new / ::get / ::set` stub for a field that will be exercised in a later step counts as a use (see `ClosedUpvalue::new/get/set` in `src/vm/vm.mbt` as "8b hooks" that exist only to satisfy the warning until 8b lands the real users).
+- **Public struct fields** (`pub struct` without `priv`) are always "used" from a warning standpoint because external code could read them. Preferred for M1 milestone-boundary structs whose fields will see cross-package reads before their internal writers land (Frame's `upvalues`, `try_stack`, `open_upvalues` — 8a exposes them, 8b writes to them).
+
+There is no `#coverage.skip` equivalent for suppressing this warning; either add users or accept the visibility.
+
+**6. `for { ... }` bare infinite loop doesn't carry a `break value` type.**
+
+MoonBit's deprecated `loop { ... }` construct could bind pattern variables and return `break v` typed. Its successor `for state = init { ... }` requires an explicit driver variable, and the bare `for { ... }` form runs unit-typed. When you want an "infinite dispatch loop that returns via `return` from the enclosing function", use `while true { ... }` and rely on `return` at each terminal arm to exit — see `Engine::execute_frame` in `src/vm/vm.mbt`. The trailing unreachable expression after the `while true` is required by MoonBit's flow analysis; add a `// Unreachable` comment.
+
+**Source**: M1 Step 8a (`src/vm`). Every pattern above is exercised in the VM package. Recorded 2026-09-11.
+
+---
+
 ---
 
 ## Testing Requirements

@@ -1,11 +1,52 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "heyq02/moonjs/src/vm"
 
+import {
+  "heyq02/moonjs/src/bytecode",
+  "heyq02/moonjs/src/value",
+}
+
 // Values
 
 // Errors
 
 // Types and methods
+pub struct ClosedUpvalue {
+  mut value : @value.JSValue
+}
+pub fn ClosedUpvalue::get(Self) -> @value.JSValue
+pub fn ClosedUpvalue::new(@value.JSValue) -> Self
+pub fn ClosedUpvalue::set(Self, @value.JSValue) -> Unit
+
+pub struct Engine {
+  globals : @value.Object
+}
+pub fn Engine::new() -> Self
+pub fn Engine::run_chunk(Self, @bytecode.Chunk) -> Result[@value.JSValue, @value.JSException]
+
+pub struct Frame {
+  mut pc : Int
+  chunk : @bytecode.Chunk
+  locals : Array[@value.JSValue]
+  upvalues : Array[UpvalueRef]
+  operand_stack : Array[@value.JSValue]
+  try_stack : Array[TryHandler]
+  this_val : @value.JSValue
+  caller : Frame?
+}
+pub fn Frame::new(@bytecode.Chunk, @value.JSValue) -> Self
+
+pub struct TryHandler {
+  catch_pc : Int
+  finally_pc : Int
+  operand_depth : Int
+}
+pub fn TryHandler::new(Int, Int, Int) -> Self
+
+pub(all) enum UpvalueRef {
+  OnStack(Frame, Int)
+  Closed(ClosedUpvalue)
+}
 
 // Type aliases
 
