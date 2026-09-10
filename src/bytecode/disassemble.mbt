@@ -19,6 +19,7 @@ fn is_unsigned_operand_op(op : Byte) -> Bool {
   op == OP_GET_GLOBAL ||
   op == OP_SET_GLOBAL ||
   op == OP_DECLARE_GLOBAL ||
+  op == OP_GET_GLOBAL_OR_UNDEF ||
   op == OP_DEFINE_PROP ||
   op == OP_GET_PROP ||
   op == OP_SET_PROP ||

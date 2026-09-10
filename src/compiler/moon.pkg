@@ -1,2 +1,15 @@
 // Compiler package: AST -> Bytecode lowering, including scope resolution and constant pool.
 // Owner milestone: M1 (core subset), M2 (class/generator/iterator/spread/destructuring), M4 (async/await lowering, regexp literal).
+
+import {
+  "moonbitlang/core/debug",
+  "heyq02/moonjs/src/util",
+  "heyq02/moonjs/src/value",
+  "heyq02/moonjs/src/ast",
+  "heyq02/moonjs/src/bytecode",
+}
+
+import {
+  "moonbitlang/core/test",
+  "heyq02/moonjs/src/parser",
+} for "test"

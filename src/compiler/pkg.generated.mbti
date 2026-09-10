@@ -1,11 +1,26 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "heyq02/moonjs/src/compiler"
 
+import {
+  "heyq02/moonjs/src/ast",
+  "heyq02/moonjs/src/bytecode",
+  "heyq02/moonjs/src/util",
+  "moonbitlang/core/debug",
+}
+
 // Values
 
 // Errors
+pub(all) suberror CompileError {
+  CompileError(msg~ : String, loc~ : @util.SourceLoc)
+} derive(@debug.Debug)
 
 // Types and methods
+pub struct Compiler {
+  // private fields
+}
+pub fn Compiler::compile_script(Self, @ast.Program, String) -> Result[@bytecode.Chunk, CompileError]
+pub fn Compiler::new() -> Self
 
 // Type aliases
 

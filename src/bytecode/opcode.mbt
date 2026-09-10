@@ -88,6 +88,32 @@ pub const OP_SET_GLOBAL : Byte = 0x15
 ///|
 pub const OP_DECLARE_GLOBAL : Byte = 0x16
 
+///|
+/// Push the global's value if it exists, or `Undefined` if it does not.
+///
+/// Distinct from `OP_GET_GLOBAL`, which throws `ReferenceError` on a miss. The
+/// compiler emits `OP_GET_GLOBAL_OR_UNDEF` for `typeof foo` and related
+/// side-effect-free reads that must succeed with `undefined` for
+/// never-declared identifiers per ES semantics (`typeof undeclared === "undefined"`
+/// must not throw). Introduced in M1 Step 7; see design.md §4.3 (0x17
+/// allocation) and Step 7 notes on `typeof` emission.
+pub const OP_GET_GLOBAL_OR_UNDEF : Byte = 0x17
+
+///|
+/// Push the current frame's `this` value. Introduced alongside
+/// `OP_GET_GLOBAL_OR_UNDEF` (M1 Step 7) so the compiler doesn't have to encode
+/// `this` as a local slot — VM Step 8 stores `this` in a dedicated
+/// `Frame.this_val` field per design.md §8.1.
+pub const OP_GET_THIS : Byte = 0x18
+
+///|
+/// Coerce the top-of-stack value to a JS Number (per `ToNumber` in ES spec).
+/// Emitted by the compiler for unary `+x` — where `x` might be any JS value
+/// including a String (in which case JS `+` on strings concatenates, so we
+/// cannot lower `+x` to `0 + x`; that would produce `"0" + "5" = "05"`
+/// instead of `5`). Introduced in M1 Step 7 fix; see design.md §4.3.
+pub const OP_TO_NUMBER : Byte = 0x19
+
 // ---------------------------------------------------------------------------
 // 0x20-0x2F: arithmetic & bitwise
 // ---------------------------------------------------------------------------
@@ -314,6 +340,12 @@ pub fn opcode_name(op : Byte) -> String {
     "SET_GLOBAL"
   } else if op == OP_DECLARE_GLOBAL {
     "DECLARE_GLOBAL"
+  } else if op == OP_GET_GLOBAL_OR_UNDEF {
+    "GET_GLOBAL_OR_UNDEF"
+  } else if op == OP_GET_THIS {
+    "GET_THIS"
+  } else if op == OP_TO_NUMBER {
+    "TO_NUMBER"
   } else if op == OP_ADD {
     "ADD"
   } else if op == OP_SUB {

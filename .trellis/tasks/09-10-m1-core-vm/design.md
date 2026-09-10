@@ -274,6 +274,9 @@ pub fn decode(instr: UInt) -> (UInt8, UInt8, UInt8, UInt8)
 0x14 get_global   (0, 1)   A=const_pool_idx (存 name string)
 0x15 set_global   (1, 0)   A=const_pool_idx
 0x16 declare_global (0, 0) A=const_pool_idx  B=kind (0=var,1=let,2=const)
+0x17 get_global_or_undef (0, 1) A=const_pool_idx — like get_global but pushes Undefined on miss instead of throwing ReferenceError. Emitted by compiler for `typeof <ident>` so `typeof undeclared === "undefined"` doesn't throw. (Added M1 Step 7.)
+0x18 get_this      (0, 1)   pushes current Frame.this_val (design.md §8.1 stores `this` outside the locals array). (Added M1 Step 7.)
+0x19 to_number     (1, 1)   applies ES `ToNumber` to the top-of-stack value. Emitted for unary `+x`; NOT lowered to `0 + x` because JS `+` string-concatenates on any String operand (`0 + "5" → "05"` vs `+"5" → 5`). (Added M1 Step 7 fix.)
 
 // 0x20-0x2F: 算术 / 位 / 比较（0 参操作数，全从栈顶取）
 0x20 add   (2, 1)

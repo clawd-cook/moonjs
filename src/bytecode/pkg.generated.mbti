@@ -50,9 +50,13 @@ pub const OP_GET_ELEM : Byte = 0x44
 
 pub const OP_GET_GLOBAL : Byte = 0x14
 
+pub const OP_GET_GLOBAL_OR_UNDEF : Byte = 0x17
+
 pub const OP_GET_LOCAL : Byte = 0x10
 
 pub const OP_GET_PROP : Byte = 0x42
+
+pub const OP_GET_THIS : Byte = 0x18
 
 pub const OP_GET_UPVALUE : Byte = 0x12
 
@@ -137,6 +141,8 @@ pub const OP_SUB : Byte = 0x21
 pub const OP_SWAP : Byte = 0x09
 
 pub const OP_THROW : Byte = 0x70
+
+pub const OP_TO_NUMBER : Byte = 0x19
 
 pub const OP_TYPEOF : Byte = 0x37
 

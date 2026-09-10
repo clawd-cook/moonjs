@@ -70,6 +70,24 @@ for state = init {
 
 ---
 
+### Don't: prefix function `not(x)` — use `!x`
+
+**Problem**:
+```moonbit
+if not(cond) { ... }
+```
+
+**Why it's bad**: The prefix `not(...)` function is deprecated under `--deny-warn`; MoonBit steers users to the `!` unary operator.
+
+**Instead**:
+```moonbit
+if !cond { ... }
+```
+
+**Source**: M1 Step 7 (`src/compiler`). Recorded 2026-09-10.
+
+---
+
 ### Don't: use MoonBit reserved keywords as variant field names / enum variant names
 
 **Hard-reserved words** (parser rejects with `unexpected token`; must rename):
