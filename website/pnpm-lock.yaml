@@ -15,6 +15,12 @@ importers:
       '@rslint/core':
         specifier: ^0.8.0
         version: 0.8.2
+      '@rspress/plugin-preview':
+        specifier: ^2.0.21
+        version: 2.0.21(@rspack/core@2.2.3(@swc/helpers@0.5.23))(@rspress/core@2.0.21(@rspack/core@2.2.3(@swc/helpers@0.5.23))(micromark-util-types@2.0.2)(micromark@4.0.2))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@rspress/plugin-rss':
+        specifier: ^2.0.21
+        version: 2.0.21(@rspress/core@2.0.21(@rspack/core@2.2.3(@swc/helpers@0.5.23))(micromark-util-types@2.0.2)(micromark@4.0.2))
       '@types/node':
         specifier: ^22.8.1
         version: 22.20.2
@@ -240,6 +246,20 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
 
+  '@rspress/plugin-preview@2.0.21':
+    resolution: {integrity: sha512-nvn5uIQqyrT2kv30EcJE/6UPhyKfxHuJIAjhjoapzGI0gxRRkcSsvDQMow6JHkmf3pulywAmYH13uhkFBl13mA==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    peerDependencies:
+      '@rspress/core': ^2.0.10
+      react: '>=18.0.0'
+      react-dom: '>=18.0.0'
+
+  '@rspress/plugin-rss@2.0.21':
+    resolution: {integrity: sha512-FmavhOo8CgMb2vTZ2IlSzqDI5fImEl1iO0K5TTCAM9vhk2HBTt8Pz1nQd2/xIVWZYzc81XoA5ex/d8veBHN6wA==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    peerDependencies:
+      '@rspress/core': ^2.0.10
+
   '@rspress/shared@2.0.21':
     resolution: {integrity: sha512-siCWkv1a4n6y7JdVRII+fwCRZGZtG5KGFfKi2w/Tt33UnIgh4XGqozZ5F/K0iZ/QUwg0wi93SoVdOQm2Q+wf8w==}
 
@@ -444,6 +464,10 @@ packages:
 
   extend@3.0.2:
     resolution: {integrity: sha512-fjquC59cD7CyW6urNXK0FBufkZcoiGG80wTuPujX590cB5Ttln20E2UB4S/WARVqhXffZl2LNgS+gQdPIIim/g==}
+
+  feed@5.2.1:
+    resolution: {integrity: sha512-jTynzYPWs9ALjro0GW8j7sv9y7cJBeOdD4Y88kVqYy/eyusIX3g+499JiTDIlD9Ge/unebx57T4Uzo6vpYvMtA==}
+    engines: {node: '>=20', pnpm: '>=10'}
 
   flexsearch@0.8.212:
     resolution: {integrity: sha512-wSyJr1GUWoOOIISRu+X2IXiOcVfg9qqBRyCPRUdLMIGJqPzMo+jMRlvE83t14v1j0dRMEaBbER/adQjp6Du2pw==}
@@ -748,6 +772,9 @@ packages:
   parse5@7.3.0:
     resolution: {integrity: sha512-IInvU7fabl34qmi9gY8XOVxhYyMyuH2xUNpb2q8/Y+7552KlejkRvqvD19nMoUW/uQGGbqNpA6Tufu5FL5BZgw==}
 
+  picocolors@1.1.1:
+    resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
+
   picomatch@4.0.7:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
@@ -759,6 +786,11 @@ packages:
 
   property-information@7.2.0:
     resolution: {integrity: sha512-IAtzIB6sUiWaJYrX9smp3V46pBGbBeLFRGdh25kg1334VcBlD8HzhPeNIWQH9zhGmo2itIe25EHt9dQP7G5hmg==}
+
+  qrcode.react@4.2.0:
+    resolution: {integrity: sha512-QpgqWi8rD9DsS9EP3z7BT+5lY5SFhsqGjpgW5DY/i3mK4M9DTBNz3ErMi8BWYEfI3L0d8GIbGmcdFAS1uIRGjA==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   react-dom@19.3.0:
     resolution: {integrity: sha512-JDk8dgif51OjFoDE70+OT9ICyYr+69HlmihNwp1+Nsfbna3t5sIiCa9ZJktDmQ4/1b/rn26hIAR2uYXDMr5r0Q==}
@@ -871,6 +903,10 @@ packages:
   remark-stringify@11.0.0:
     resolution: {integrity: sha512-1OSmLd3awB/t8qdoEOMazZkNsfVTeY4fTsgzcQFdXNq8ToTN4ZGwrMnlda4K6smTFKD+GRV6O48i6Z4iKgPPpw==}
 
+  sax@1.6.1:
+    resolution: {integrity: sha512-42tBVwLWnaQvW5zc4HbZrTuWccECCZfBi92FDuwtqxasH+JbPB3/FOKb1m222K42R4WxuxzzMsTswfzgtSu64Q==}
+    engines: {node: '>=11.0.0'}
+
   scheduler@0.27.0:
     resolution: {integrity: sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q==}
 
@@ -961,6 +997,10 @@ packages:
 
   web-namespaces@2.0.1:
     resolution: {integrity: sha512-bKr1DkiNa2krS7qxNtdrtHAmzuYGFQLiQ13TsorsdT6ULTkPLKuu5+GsFpDlg6JFjUTwX2DyhMPG2be8uPrqsQ==}
+
+  xml-js@1.6.11:
+    resolution: {integrity: sha512-7rVi2KMfwfWFl+GpPg6m80IVMWXLRjO+PxTq7V2CDhoGak0wzYzFgUY2m4XJ47OGdXd8eLE8EmwfAmdjw7lC1g==}
+    hasBin: true
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
@@ -1202,6 +1242,25 @@ snapshots:
       - micromark-util-types
       - supports-color
 
+  '@rspress/plugin-preview@2.0.21(@rspack/core@2.2.3(@swc/helpers@0.5.23))(@rspress/core@2.0.21(@rspack/core@2.2.3(@swc/helpers@0.5.23))(micromark-util-types@2.0.2)(micromark@4.0.2))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+    dependencies:
+      '@rsbuild/core': 2.2.5
+      '@rsbuild/plugin-react': 2.1.0(@rsbuild/core@2.2.5)(@rspack/core@2.2.3(@swc/helpers@0.5.23))
+      '@rspress/core': 2.0.21(@rspack/core@2.2.3(@swc/helpers@0.5.23))(micromark-util-types@2.0.2)(micromark@4.0.2)
+      picocolors: 1.1.1
+      qrcode.react: 4.2.0(react@19.3.0)
+      react: 19.3.0
+      react-dom: 19.3.0(react@19.3.0)
+    transitivePeerDependencies:
+      - '@module-federation/runtime-tools'
+      - '@rspack/core'
+      - core-js
+
+  '@rspress/plugin-rss@2.0.21(@rspress/core@2.0.21(@rspack/core@2.2.3(@swc/helpers@0.5.23))(micromark-util-types@2.0.2)(micromark@4.0.2))':
+    dependencies:
+      '@rspress/core': 2.0.21(@rspack/core@2.2.3(@swc/helpers@0.5.23))(micromark-util-types@2.0.2)(micromark@4.0.2)
+      feed: 5.2.1
+
   '@rspress/shared@2.0.21':
     dependencies:
       '@rsbuild/core': 2.2.5
@@ -1421,6 +1480,10 @@ snapshots:
       '@types/estree': 1.0.9
 
   extend@3.0.2: {}
+
+  feed@5.2.1:
+    dependencies:
+      xml-js: 1.6.11
 
   flexsearch@0.8.212: {}
 
@@ -2082,11 +2145,17 @@ snapshots:
     dependencies:
       entities: 6.0.1
 
+  picocolors@1.1.1: {}
+
   picomatch@4.0.7: {}
 
   prettier@3.9.6: {}
 
   property-information@7.2.0: {}
+
+  qrcode.react@4.2.0(react@19.3.0):
+    dependencies:
+      react: 19.3.0
 
   react-dom@19.3.0(react@19.3.0):
     dependencies:
@@ -2249,6 +2318,8 @@ snapshots:
       mdast-util-to-markdown: 2.1.2
       unified: 11.0.5
 
+  sax@1.6.1: {}
+
   scheduler@0.27.0: {}
 
   scheduler@0.28.0: {}
@@ -2360,5 +2431,9 @@ snapshots:
       vfile-message: 4.0.3
 
   web-namespaces@2.0.1: {}
+
+  xml-js@1.6.11:
+    dependencies:
+      sax: 1.6.1
 
   zwitch@2.0.4: {}

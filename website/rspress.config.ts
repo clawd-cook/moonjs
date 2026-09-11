@@ -1,9 +1,11 @@
 import * as path from 'node:path';
 import { defineConfig } from '@rspress/core';
+import { pluginPreview } from '@rspress/plugin-preview';
+import { pluginRss } from '@rspress/plugin-rss';
 
 export default defineConfig({
   root: path.join(__dirname, 'docs'),
-  base: '/clawd-cook/',
+  base: '/moonjs/',
   siteOrigin: 'https://clawd-cook.github.io',
   title: 'MoonJS',
   description: 'A pure-MoonBit JavaScript engine targeting the QuickJS test corpus and TC39 test262.',
@@ -43,4 +45,12 @@ export default defineConfig({
       message: 'Released under the Apache-2.0 License.',
     },
   },
+  plugins: [
+    pluginPreview(),
+    pluginRss({
+      // 你的文档站点的 url
+      siteUrl: 'https://clawd-cook.github.io/moonjs/',
+      // ...更多配置请见下文
+    }),
+  ],
 });
