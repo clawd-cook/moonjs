@@ -65,7 +65,7 @@ Parallelism note: `publish-mooncakes` and `github-release` execute independently
 
 | ID | Requirement | Priority | Acceptance Criteria |
 |----|-------------|----------|---------------------|
-| REQ-001 | Trigger only on semver tag pushes | High | Regex `^v\d+\.\d+\.\d+(-.+)?$` matches; other tag shapes do NOT run the workflow. |
+| REQ-001 | Trigger only on semver tag pushes | High | Tag glob `v[0-9]*` matches release and pre-release tags (e.g. `v0.1.0`, `v0.0.1-alpha.0`). Non-`v` tags do NOT run the workflow. Additional semver-shape validation runs inside the `verify` job's `resolve` step. |
 | REQ-002 | Confirm `moon.mod` version matches the tag | High | With tag `vX.Y.Z`, `verify` reads `moon.mod`, extracts `version`, asserts equality to `X.Y.Z`; mismatch fails the job with a clear message. |
 | REQ-003 | Full quality gate on `verify` | High | `moon fmt` idempotent, `moon check --deny-warn` clean on `--target native` AND `--target js`, `moon test --target native` all green. Any failure blocks publication. |
 | REQ-004 | Publish to mooncakes.io | High | `moon publish` succeeds; job output includes the published module URL / version. Re-running on an already-published tag surfaces the mooncakes duplicate-version error clearly (does NOT falsely succeed). |

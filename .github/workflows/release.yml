@@ -10,7 +10,12 @@ name: Release
 on:
   push:
     tags:
-      - 'v*.*.*'
+      # `v*.*.*` alone would not match pre-release suffixes like
+      # `v0.0.1-alpha.0` because `*` does not cross `.` — the third segment
+      # would need to swallow `1-alpha.0` (a string containing `.`), which
+      # fnmatch refuses. `v[0-9]*` matches any tag starting with `v` + digit,
+      # which is the intent (release + pre-release semver tags).
+      - 'v[0-9]*'
   workflow_dispatch:
     inputs:
       tag:
