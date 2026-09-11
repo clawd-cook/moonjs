@@ -3,10 +3,13 @@ import { defineConfig } from '@rspress/core';
 
 export default defineConfig({
   root: path.join(__dirname, 'docs'),
+  base: '/clawd-cook/',
+  siteOrigin: 'https://clawd-cook.github.io',
   title: 'MoonJS',
   description: 'A pure-MoonBit JavaScript engine targeting the QuickJS test corpus and TC39 test262.',
-  lang: 'en',
   icon: '/rspress-icon.png',
+
+  lang: 'en',
   logo: {
     light: '/rspress-light-logo.png',
     dark: '/rspress-dark-logo.png',
@@ -27,6 +30,7 @@ export default defineConfig({
         '一个用纯 MoonBit 实现的 JavaScript 引擎，目标通过 QuickJS 和 test262 全部用例。',
     },
   ],
+  llms: true,
   themeConfig: {
     socialLinks: [
       {
