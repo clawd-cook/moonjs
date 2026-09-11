@@ -11,7 +11,7 @@
 
 name = "heyq02/moonjs"
 
-version = "0.0.1-alpha.0"
+version = "0.0.1-alpha.1"
 
 readme = "README.mbt.md"
 
