@@ -2,6 +2,7 @@
 package "heyq02/moonjs/src/vm"
 
 import {
+  "heyq02/moonjs/src/builtins",
   "heyq02/moonjs/src/bytecode",
   "heyq02/moonjs/src/value",
 }
@@ -14,6 +15,7 @@ import {
 pub struct Engine {
   globals : @value.Object
   chunk_registry : Array[@bytecode.Chunk]
+  builtins : @builtins.Builtins?
 }
 pub fn Engine::new() -> Self
 pub fn Engine::run_chunk(Self, @bytecode.Chunk) -> Result[@value.JSValue, @value.JSException]

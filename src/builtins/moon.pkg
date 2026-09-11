@@ -1,2 +1,10 @@
 // Builtins package: ECMAScript built-in objects and prototypes.
 // Owner milestone: M1 (Object/Function/Error skeleton), M3 (majority), M4 (typedarray/regexp exposures), M5 (qjs:std / qjs:os).
+
+import {
+  "heyq02/moonjs/src/value",
+}
+
+import {
+  "moonbitlang/core/test",
+} for "test"

@@ -48,8 +48,30 @@ pub(all) enum JSValue {
   Str(String)
   Object(Object)
   Function(Function)
+  NativeFn(NativeFunction)
 } derive(@debug.Debug)
 pub impl Eq for JSValue
+
+pub struct NativeError {
+  name : String
+  message : String
+} derive(@debug.Debug)
+pub fn NativeError::message(Self) -> String
+pub fn NativeError::name(Self) -> String
+pub fn NativeError::new(String, String) -> Self
+
+pub struct NativeFunction {
+  name : String
+  is_constructor : Bool
+  impl_ : (JSValue, Array[JSValue]) -> Result[JSValue, NativeError]
+  mut prototype : JSValue
+} derive(@debug.Debug)
+pub fn NativeFunction::call(Self, JSValue, Array[JSValue]) -> Result[JSValue, NativeError]
+pub fn NativeFunction::is_constructor(Self) -> Bool
+pub fn NativeFunction::name(Self) -> String
+pub fn NativeFunction::new(String, Bool, (JSValue, Array[JSValue]) -> Result[JSValue, NativeError]) -> Self
+pub fn NativeFunction::prototype(Self) -> JSValue
+pub fn NativeFunction::set_prototype(Self, JSValue) -> Unit
 
 #alias(ObjectRef)
 pub struct Object {

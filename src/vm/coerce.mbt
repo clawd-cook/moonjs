@@ -42,6 +42,7 @@ fn to_boolean(v : @value.JSValue) -> Bool {
     Str(s) => s.length() > 0
     Object(_) => true
     Function(_) => true
+    NativeFn(_) => true
   }
 }
 
@@ -65,6 +66,10 @@ fn to_number(v : @value.JSValue) -> Double {
     Object(_) => @double.not_a_number
     // Function → similarly NaN under M1's no-method-dispatch policy.
     Function(_) => @double.not_a_number
+    // NativeFn → same NaN treatment: JS `+f` where `f` is a function yields
+    // NaN because `ToPrimitive` on a function eventually calls `toString`
+    // whose result parses to NaN.
+    NativeFn(_) => @double.not_a_number
   }
 }
 
@@ -206,6 +211,9 @@ fn to_string(v : @value.JSValue) -> String {
     // Function → source-form stub. `Function.prototype.toString` in real
     // JS returns the function's source; for M1 we return a synthetic form.
     Function(f) => "function " + f.name() + "() { [native code] }"
+    // NativeFn → same synthetic form as Function; native code has no
+    // ECMAScript source to return anyway.
+    NativeFn(nf) => "function " + nf.name() + "() { [native code] }"
   }
 }
 

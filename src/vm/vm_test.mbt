@@ -233,6 +233,7 @@ fn describe_value(v : @value.JSValue) -> String {
     Str(s) => "\"" + s + "\""
     Object(_) => "[object]"
     Function(f) => "[function " + f.name() + "]"
+    NativeFn(nf) => "[native " + nf.name() + "]"
   }
 }
 
@@ -944,4 +945,92 @@ test "closure: stack trace records both frames on throw" {
         )
       }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Step 9 — builtins + native functions
+// ---------------------------------------------------------------------------
+
+///|
+test "new Object() returns empty object" {
+  // Just verifying the call doesn't crash and produces an Object value; own
+  // properties list should be empty.
+  let v = eval_expr("new Object()")
+  match v {
+    Object(o) => assert_eq(o.shape.keys_ordered.length(), 0)
+    other => fail("expected Object, got " + describe_value(other))
+  }
+}
+
+///|
+test "typeof Object === \"function\"" {
+  expect_string("typeof Object", "function")
+}
+
+///|
+test "typeof Error === \"function\"" {
+  expect_string("typeof Error", "function")
+}
+
+///|
+test "typeof TypeError === \"function\"" {
+  expect_string("typeof TypeError", "function")
+}
+
+///|
+test "new Error(\"hello\").message === \"hello\"" {
+  expect_string("new Error(\"hello\").message", "hello")
+}
+
+///|
+test "new Error().message is default (from prototype)" {
+  // No arg → message inherited from Error.prototype which is "".
+  expect_string("new Error().message", "")
+}
+
+///|
+test "new Error().name inherited from Error.prototype" {
+  expect_string("new Error().name", "Error")
+}
+
+///|
+test "new TypeError(\"bad\").name === \"TypeError\"" {
+  expect_string("new TypeError(\"bad\").name", "TypeError")
+}
+
+///|
+test "new TypeError(\"bad\").message === \"bad\"" {
+  expect_string("new TypeError(\"bad\").message", "bad")
+}
+
+///|
+test "new RangeError inherits name" {
+  expect_string("new RangeError().name", "RangeError")
+}
+
+///|
+test "new SyntaxError inherits name" {
+  expect_string("new SyntaxError().name", "SyntaxError")
+}
+
+///|
+test "new ReferenceError inherits name" {
+  expect_string("new ReferenceError().name", "ReferenceError")
+}
+
+///|
+test "empty object literal proto chain reaches Object.prototype constructor" {
+  // {}.constructor should walk the prototype chain to Object.prototype and
+  // find the `constructor` property linking back to the Object NativeFn.
+  expect_string("typeof ({}).constructor", "function")
+}
+
+///|
+test "globalThis === globalThis (identity)" {
+  expect_bool("globalThis === globalThis", true)
+}
+
+///|
+test "globalThis is truthy (Object)" {
+  expect_string("typeof globalThis", "object")
 }

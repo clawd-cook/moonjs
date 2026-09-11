@@ -157,9 +157,9 @@ pub fn TryHandler::new(
 ///|
 /// Top-level engine. Holds:
 ///
-/// - `globals`: the global object (Step 9 will populate builtin
-///   constructors and prototypes; 8b1 only seeds `undefined` / `NaN` /
-///   `Infinity`).
+/// - `globals`: the global object (Step 9 populates builtin constructors
+///   and prototypes via the `Builtins` object; M1 also seeds `undefined` /
+///   `NaN` / `Infinity` / `globalThis`).
 /// - `chunk_registry`: maps chunk_id → Chunk. Every callable JS function
 ///   references its underlying chunk through this table; assignment happens
 ///   in `register_chunk`, called from `run_chunk` and from the
@@ -167,31 +167,28 @@ pub fn TryHandler::new(
 ///   been registered yet. Chunks are physically-identified in the registry
 ///   (`physical_equal`), which means re-registering the same Chunk twice
 ///   returns the existing id.
+/// - `builtins`: the Step 9 builtin registry. Kept as `Option[Builtins]`
+///   so downstream milestones can construct an Engine with a stripped-down
+///   builtin set (e.g. for isolated unit tests) if needed; M1 always sets
+///   it to `Some(...)` inside `Engine::new`.
 pub struct Engine {
   globals : @value.ObjectRef
   chunk_registry : Array[@bytecode.Chunk]
+  builtins : @builtins.Builtins?
 }
 
 ///|
-/// Construct a fresh engine with a minimal global object seeded with the
-/// three "value" globals (`undefined`, `NaN`, `Infinity`) that lexer /
-/// parser / compiler treat as normal identifier reads. Full builtin
-/// initialisation (Object / Function / Error family / String constructors)
-/// lands in Step 9.
+/// Construct a fresh engine with a minimal global object seeded via
+/// `Builtins::install_into`. This wires up `Object` / `Error` / the four
+/// Error subclasses / `undefined` / `NaN` / `Infinity` / `globalThis`.
 pub fn Engine::new() -> Engine {
   let globals = @value.Object::new(@value.Shape::new(), @value.Null)
-  globals.add_property("undefined", @value.Undefined, @value.ATTR_DEFAULT_DATA)
-  globals.add_property(
-    "NaN",
-    @value.Number(@double.not_a_number),
-    @value.ATTR_DEFAULT_DATA,
-  )
-  globals.add_property(
-    "Infinity",
-    @value.Number(@double.infinity),
-    @value.ATTR_DEFAULT_DATA,
-  )
-  { globals, chunk_registry: [], }
+  let bi = @builtins.Builtins::new()
+  // Link the global object's own [[Prototype]] to Object.prototype so
+  // `globalThis.hasOwnProperty(...)` etc. work in later milestones.
+  globals.set_proto(@value.Object(bi.object_proto()))
+  bi.install_into(globals)
+  { globals, chunk_registry: [], builtins: Some(bi), }
 }
 
 ///|
@@ -355,6 +352,70 @@ fn make_error_object(name : String, message : String) -> @value.JSValue {
   obj.add_property("name", @value.Str(name), @value.ATTR_DEFAULT_DATA)
   obj.add_property("message", @value.Str(message), @value.ATTR_DEFAULT_DATA)
   @value.Object(obj)
+}
+
+///|
+/// Convert a `NativeError` returned by a native function's implementation
+/// into a JS `Error`-family object suitable for throwing. Uses the same
+/// plain-object shape as `make_error_object`; Step 9's builtin machinery
+/// takes care of populating the actual error prototypes so `err instanceof
+/// Error` etc. behave correctly. Callers receive back a `JSValue` ready to
+/// be wrapped by `throw_from_frame`.
+fn Engine::make_error_from_native(
+  self : Engine,
+  err : @value.NativeError,
+) -> @value.JSValue {
+  let obj = @value.Object::new(@value.Shape::new(), @value.Null)
+  obj.add_property("name", @value.Str(err.name()), @value.ATTR_DEFAULT_DATA)
+  obj.add_property(
+    "message",
+    @value.Str(err.message()),
+    @value.ATTR_DEFAULT_DATA,
+  )
+  // Wire the proto to the matching Error-family prototype installed by
+  // Builtins so `instanceof Error` / `instanceof TypeError` succeed.
+  let proto = self.error_proto_for(err.name())
+  obj.set_proto(proto)
+  @value.Object(obj)
+}
+
+///|
+/// Look up the Error-family prototype object corresponding to a native
+/// error's `name` field. Falls back to `Error.prototype` for unknown names
+/// (defensive — every native error in M1 uses a name we know about).
+fn Engine::error_proto_for(self : Engine, name : String) -> @value.JSValue {
+  match self.builtins {
+    Some(bi) =>
+      match name {
+        "TypeError" => @value.Object(bi.type_error_proto())
+        "RangeError" => @value.Object(bi.range_error_proto())
+        "SyntaxError" => @value.Object(bi.syntax_error_proto())
+        "ReferenceError" => @value.Object(bi.reference_error_proto())
+        _ => @value.Object(bi.error_proto())
+      }
+    None => @value.Null
+  }
+}
+
+///|
+/// Return `Object(Object.prototype)` if the engine has builtins installed,
+/// else `Null`. Used by `OP_NEW_OBJECT` and by `OP_CONSTRUCT` on a
+/// NativeFn that lacks an explicit `.prototype`.
+fn Engine::object_proto_or_null(self : Engine) -> @value.JSValue {
+  match self.builtins {
+    Some(bi) => @value.Object(bi.object_proto())
+    None => @value.Null
+  }
+}
+
+///|
+/// Return `Object(Array.prototype)` if the engine has builtins installed,
+/// else `Null`. Used by `OP_NEW_ARRAY`.
+fn Engine::array_proto_or_null(self : Engine) -> @value.JSValue {
+  match self.builtins {
+    Some(bi) => @value.Object(bi.array_proto())
+    None => @value.Null
+  }
 }
 
 ///|
@@ -663,7 +724,12 @@ fn Engine::execute_frame(
       }
       // ---------------- 0x40-0x49: objects & arrays ----------------
     } else if op == @bytecode.OP_NEW_OBJECT {
-      let obj = @value.Object::new(@value.Shape::new(), @value.Null)
+      // Link fresh object literals to Object.prototype so `.hasOwnProperty`
+      // etc. (once M3 fleshes them out) are reachable.
+      let obj = @value.Object::new(
+        @value.Shape::new(),
+        self.object_proto_or_null(),
+      )
       frame.operand_stack.push(@value.Object(obj))
       frame.pc = cur_pc + 1
     } else if op == @bytecode.OP_DEFINE_PROP {
@@ -793,7 +859,10 @@ fn Engine::execute_frame(
       // Operand: hint length. M1 arrays are regular objects with a
       // `length` numeric property that ARRAY_PUSH keeps in sync.
       let (_hint, adv) = frame.chunk.read_operand_u24(cur_pc)
-      let obj = @value.Object::new(@value.Shape::new(), @value.Null)
+      let obj = @value.Object::new(
+        @value.Shape::new(),
+        self.array_proto_or_null(),
+      )
       obj.add_property("length", @value.Int32(0), @value.ATTR_DEFAULT_DATA)
       frame.operand_stack.push(@value.Object(obj))
       frame.pc = cur_pc + adv
@@ -883,6 +952,16 @@ fn Engine::execute_frame(
           )
           frame = new_frame
         }
+        NativeFn(nf) =>
+          // Native function: invoke synchronously and push the result back
+          // onto the caller's operand stack.
+          match nf.call(@value.Undefined, args) {
+            Ok(v) => frame.operand_stack.push(v)
+            Err(nerr) => {
+              let err = self.make_error_from_native(nerr)
+              return Err(throw_from_frame(frame, cur_pc, err))
+            }
+          }
         _ => {
           let err = make_error_object(
             "TypeError",
@@ -919,6 +998,16 @@ fn Engine::execute_frame(
           )
           frame = new_frame
         }
+        NativeFn(nf) =>
+          // Method call on a native function: `this_val` is the receiver
+          // (obj in `obj.f()`); the native impl reads it directly.
+          match nf.call(this_val, args) {
+            Ok(v) => frame.operand_stack.push(v)
+            Err(nerr) => {
+              let err = self.make_error_from_native(nerr)
+              return Err(throw_from_frame(frame, cur_pc, err))
+            }
+          }
         _ => {
           let err = make_error_object(
             "TypeError",
@@ -952,16 +1041,54 @@ fn Engine::execute_frame(
             )
             return Err(throw_from_frame(frame, cur_pc, err))
           }
-          // Create the new object. Step 9 will wire `func.prototype` as
-          // its proto; for 8b1 we use Null (matches "no builtin prototype
-          // chain yet").
-          let new_obj = @value.Object::new(@value.Shape::new(), @value.Null)
+          // Fresh receiver linked to Object.prototype for now. When M2
+          // lands class syntax the compiler will emit a specific
+          // `.prototype` reference; for pure `function F(){}` constructors
+          // the ES-spec prototype comes from the function's own
+          // `.prototype` property, which M1 does not yet materialize on
+          // user functions. Object.prototype is a safe fallback.
+          let new_obj = @value.Object::new(
+            @value.Shape::new(),
+            self.object_proto_or_null(),
+          )
           let this_val : @value.JSValue = @value.Object(new_obj)
           let chunk = self.chunk_registry[func.chunk_id()]
           let new_frame = Frame::new_for_call(
             chunk, this_val, args, func, frame,
           )
           frame = new_frame
+        }
+        NativeFn(nf) => {
+          if !nf.is_constructor() {
+            let err = make_error_object(
+              "TypeError",
+              nf.name() + " is not a constructor",
+            )
+            return Err(throw_from_frame(frame, cur_pc, err))
+          }
+          // Materialise a fresh receiver whose proto is nf.prototype (set
+          // by builtin init) or Object.prototype as a fallback.
+          let proto = match nf.prototype() {
+            Object(_) => nf.prototype()
+            _ => self.object_proto_or_null()
+          }
+          let new_obj = @value.Object::new(@value.Shape::new(), proto)
+          let this_val : @value.JSValue = @value.Object(new_obj)
+          match nf.call(this_val, args) {
+            Ok(ret) => {
+              // JS spec: constructor returns `this` unless the impl returns
+              // an Object / Function / NativeFn.
+              let final_ret : @value.JSValue = match ret {
+                Object(_) | Function(_) | NativeFn(_) => ret
+                _ => this_val
+              }
+              frame.operand_stack.push(final_ret)
+            }
+            Err(nerr) => {
+              let err = self.make_error_from_native(nerr)
+              return Err(throw_from_frame(frame, cur_pc, err))
+            }
+          }
         }
         _ => {
           let err = make_error_object(
@@ -1077,6 +1204,7 @@ fn typeof_string(v : @value.JSValue) -> String {
     Str(_) => "string"
     Object(_) => "object"
     Function(_) => "function"
+    NativeFn(_) => "function"
   }
 }
 
@@ -1125,6 +1253,19 @@ fn get_property_value(
         // We don't have direct access to param_count from Function — that
         // lives in the Chunk. Step 9 will wire this properly; for 8b1
         // return 0 as a placeholder.
+        return Ok(@value.Int32(0))
+      }
+      Ok(@value.Undefined)
+    }
+    NativeFn(nf) => {
+      if name == "name" {
+        return Ok(@value.Str(nf.name()))
+      }
+      if name == "prototype" {
+        return Ok(nf.prototype())
+      }
+      if name == "length" {
+        // Same placeholder rationale as `Function`.
         return Ok(@value.Int32(0))
       }
       Ok(@value.Undefined)
@@ -1193,6 +1334,7 @@ fn describe_call_target(v : @value.JSValue) -> String {
     Str(s) => "\"" + s + "\""
     Object(_) => "[object Object]"
     Function(f) => f.name()
+    NativeFn(nf) => nf.name()
   }
 }
 
@@ -1269,7 +1411,7 @@ fn adjust_ctor_return(
   let call_op = @bytecode.decode(caller.chunk.code[pc - 1]).op
   if call_op == @bytecode.OP_CONSTRUCT {
     match ret {
-      Object(_) | Function(_) => ret
+      Object(_) | Function(_) | NativeFn(_) => ret
       _ => this_val
     }
   } else {

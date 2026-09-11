@@ -1,11 +1,43 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "heyq02/moonjs/src/builtins"
 
+import {
+  "heyq02/moonjs/src/value",
+}
+
 // Values
 
 // Errors
 
 // Types and methods
+pub struct Builtins {
+  object_proto : @value.Object
+  function_proto : @value.Object
+  array_proto : @value.Object
+  string_proto : @value.Object
+  error_proto : @value.Object
+  type_error_proto : @value.Object
+  range_error_proto : @value.Object
+  syntax_error_proto : @value.Object
+  reference_error_proto : @value.Object
+  object_ctor : @value.NativeFunction
+  error_ctor : @value.NativeFunction
+  type_error_ctor : @value.NativeFunction
+  range_error_ctor : @value.NativeFunction
+  syntax_error_ctor : @value.NativeFunction
+  reference_error_ctor : @value.NativeFunction
+}
+pub fn Builtins::array_proto(Self) -> @value.Object
+pub fn Builtins::error_proto(Self) -> @value.Object
+pub fn Builtins::function_proto(Self) -> @value.Object
+pub fn Builtins::install_into(Self, @value.Object) -> Unit
+pub fn Builtins::new() -> Self
+pub fn Builtins::object_proto(Self) -> @value.Object
+pub fn Builtins::range_error_proto(Self) -> @value.Object
+pub fn Builtins::reference_error_proto(Self) -> @value.Object
+pub fn Builtins::string_proto(Self) -> @value.Object
+pub fn Builtins::syntax_error_proto(Self) -> @value.Object
+pub fn Builtins::type_error_proto(Self) -> @value.Object
 
 // Type aliases
 

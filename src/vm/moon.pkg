@@ -8,6 +8,7 @@ import {
   "heyq02/moonjs/src/util",
   "heyq02/moonjs/src/value",
   "heyq02/moonjs/src/bytecode",
+  "heyq02/moonjs/src/builtins",
 }
 
 import {
