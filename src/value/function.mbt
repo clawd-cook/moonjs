@@ -47,7 +47,7 @@ pub fn Upvalue::set(self : Upvalue, v : JSValue) -> Unit {
 }
 
 ///|
-/// A runtime JS function. Carries three pieces of information:
+/// A runtime JS function. Carries four pieces of information:
 ///
 /// - `chunk_id`: opaque handle into the current `Engine`'s chunk registry.
 ///   The Engine is responsible for handing out and resolving these ids.
@@ -59,6 +59,13 @@ pub fn Upvalue::set(self : Upvalue, v : JSValue) -> Unit {
 ///   disassembler. `"<anonymous>"` for unnamed function expressions.
 /// - `is_constructor`: `false` for arrow functions once M2 lands; always
 ///   `true` in M1 (only ordinary functions exist).
+/// - `prototype`: the `.prototype` object exposed via `f.prototype` and used
+///   as the `[[Prototype]]` for `new f(...)`'s freshly-allocated receiver.
+///   The VM populates this when `OP_NEW_CLOSURE` runs: a fresh empty Object
+///   whose own `[[Prototype]]` links to `Object.prototype`. Consulted by
+///   `OP_INSTANCEOF` to walk the receiver's proto chain looking for
+///   identity match, and by `OP_CONSTRUCT` to set the new receiver's
+///   proto. (Introduced in M1 Step 8b2.)
 ///
 /// `Function` deliberately does NOT include a `home_object` / `bound_this`
 /// slot in M1. Method dispatch relies on the caller supplying `this` via
@@ -68,19 +75,22 @@ pub struct Function {
   upvalues : Array[Upvalue]
   name : String
   is_constructor : Bool
+  mut prototype : JSValue
 } derive(@debug.Debug)
 
 ///|
-/// Constructor. All fields are set at creation; `Function` values are
-/// immutable at the type level (individual `Upvalue` cells are mutable
-/// but the outer struct is not).
+/// Constructor. All fields except `prototype` are set at creation; the
+/// prototype defaults to `Undefined` and is populated by the VM when the
+/// Function value is produced via `OP_NEW_CLOSURE`. (Kept mutable so the
+/// VM can wire the prototype after the value is constructed, matching the
+/// two-step dance used by `NativeFunction::set_prototype`.)
 pub fn Function::new(
   chunk_id : Int,
   upvalues : Array[Upvalue],
   name : String,
   is_constructor : Bool,
 ) -> Function {
-  { chunk_id, upvalues, name, is_constructor, }
+  { chunk_id, upvalues, name, is_constructor, prototype: Undefined, }
 }
 
 ///|
@@ -109,4 +119,23 @@ pub fn Function::name(self : Function) -> String {
 /// arrive in M2 and are the first non-constructor callable).
 pub fn Function::is_constructor(self : Function) -> Bool {
   self.is_constructor
+}
+
+///|
+/// The `.prototype` object attached to this function value. `Undefined`
+/// until the VM populates it via `set_prototype` (which happens inside
+/// `OP_NEW_CLOSURE` for every user function, so JS-visible reads of
+/// `f.prototype` always land on a real Object). Consulted by
+/// `OP_INSTANCEOF` and `OP_CONSTRUCT`.
+pub fn Function::prototype(self : Function) -> JSValue {
+  self.prototype
+}
+
+///|
+/// Rewire the `.prototype` object. Called by `OP_NEW_CLOSURE` in the VM
+/// immediately after the Function value is allocated (the VM knows the
+/// engine's Object.prototype and thus can wire the prototype's own
+/// `[[Prototype]]` correctly — the value package does not).
+pub fn Function::set_prototype(self : Function, proto : JSValue) -> Unit {
+  self.prototype = proto
 }

@@ -1,4 +1,4 @@
-// Blackbox VM tests for Step 8a.
+// Blackbox VM tests for Step 8a / 8b1 / 8b2.
 //
 // Coverage strategy: use the parser + compiler pipeline to compile a JS
 // snippet, then execute it via `Engine::run_chunk`. Verify the observable
@@ -1033,4 +1033,233 @@ test "globalThis === globalThis (identity)" {
 ///|
 test "globalThis is truthy (Object)" {
   expect_string("typeof globalThis", "object")
+}
+
+// ---------------------------------------------------------------------------
+// Step 8b2 — try/catch/finally + full instanceof
+// ---------------------------------------------------------------------------
+
+///|
+test "try/catch: catches thrown string" {
+  expect_string("var r; try { throw \"x\"; } catch (e) { r = e; } r", "x")
+}
+
+///|
+test "try/catch: catches Error object and reads .message" {
+  expect_string(
+    "var r; try { throw new Error(\"boom\"); } catch (e) { r = e.message; } r", "boom",
+  )
+}
+
+///|
+test "try/catch: catch runs then normal flow continues" {
+  expect_int32(
+    "var r = 0; try { throw 1; } catch (e) { r = e; } r = r + 10; r", 11,
+  )
+}
+
+///|
+test "try/catch: no throw → catch body not run" {
+  expect_int32("var r = 0; try { r = 1; } catch (e) { r = 99; } r", 1)
+}
+
+///|
+test "try/catch: nested — inner catches" {
+  expect_int32(
+    "var r; try { try { throw 1; } catch (e) { r = e; } } catch (e) { r = 99; } r",
+    1,
+  )
+}
+
+///|
+test "try/catch: nested — inner rethrows, outer catches" {
+  expect_int32(
+    "var r; try { try { throw 1; } catch (e) { throw 2; } } catch (e) { r = e; } r",
+    2,
+  )
+}
+
+///|
+test "try/finally: finally runs on normal exit" {
+  expect_int32("var r = 0; try { r = 1; } finally { r = 2; } r", 2)
+}
+
+///|
+test "try/catch: TypeError from bad property read is catchable" {
+  expect_string(
+    "var r; try { var x = null; x.y; } catch (e) { r = e.name; } r", "TypeError",
+  )
+}
+
+///|
+test "try/catch: ReferenceError is catchable" {
+  expect_string(
+    "var r; try { var x = undeclared_here_too; } catch (e) { r = e.name; } r", "ReferenceError",
+  )
+}
+
+///|
+test "try/catch: throw across function boundary" {
+  // Callee throws; caller catches. Verifies cross-frame unwind.
+  expect_string(
+    "function inner() { throw \"boom\"; } var r; try { inner(); } catch (e) { r = e; } r",
+    "boom",
+  )
+}
+
+///|
+test "try/catch: throw across nested function calls" {
+  // Multi-level cross-frame: outer -> middle -> inner throws. outer catches.
+  expect_string(
+    "function inner() { throw \"deep\"; } function middle() { inner(); } function outer() { try { middle(); } catch (e) { return e; } } outer()",
+    "deep",
+  )
+}
+
+///|
+test "try/catch: catch in caller cleans operand stack of callee" {
+  // The callee pushes junk before throwing; the caller's catch resumes
+  // cleanly. This is a regression check for the operand-stack truncation in
+  // unwind_in_frame.
+  expect_int32(
+    "function bomb() { var x = 1 + 2; throw x; } var r; try { bomb(); } catch (e) { r = e; } r",
+    3,
+  )
+}
+
+///|
+test "uncaught throw at top level is Err with the thrown value" {
+  let chunk = compile_source("throw \"x\";")
+  let engine = @vm.Engine::new()
+  match engine.run_chunk(chunk) {
+    Ok(_) => fail("expected uncaught throw")
+    Err(e) =>
+      match e.value {
+        Str(s) => assert_eq(s, "x")
+        _ => fail("expected Str, got other")
+      }
+  }
+}
+
+///|
+test "instanceof: plain object instanceof Object" {
+  expect_bool("({}) instanceof Object", true)
+}
+
+///|
+test "instanceof: primitives are never instanceof Object" {
+  expect_bool("1 instanceof Object", false)
+  expect_bool("\"x\" instanceof Object", false)
+  expect_bool("null instanceof Object", false)
+  expect_bool("true instanceof Object", false)
+}
+
+///|
+test "instanceof: Error instance vs Error" {
+  expect_bool("(new Error(\"e\")) instanceof Error", true)
+}
+
+///|
+test "instanceof: Error instance vs Object (proto chain walk)" {
+  expect_bool("(new Error(\"e\")) instanceof Object", true)
+}
+
+///|
+test "instanceof: TypeError instance vs Error (subclass proto chain)" {
+  expect_bool("(new TypeError(\"t\")) instanceof Error", true)
+}
+
+///|
+test "instanceof: TypeError instance vs TypeError" {
+  expect_bool("(new TypeError(\"t\")) instanceof TypeError", true)
+}
+
+///|
+test "instanceof: user function constructor" {
+  expect_bool(
+    "function F(x) { this.x = x; } var o = new F(1); o instanceof F", true,
+  )
+}
+
+///|
+test "instanceof: user constructor vs Object (proto chain)" {
+  // new F() has proto = F.prototype, which itself has proto = Object.prototype.
+  expect_bool("function F() {} var o = new F(); o instanceof Object", true)
+}
+
+///|
+test "instanceof: two different user constructors don't cross-match" {
+  expect_bool(
+    "function F() {} function G() {} var o = new F(); o instanceof G", false,
+  )
+}
+
+///|
+test "instanceof: RHS non-callable throws TypeError" {
+  let chunk = compile_source(
+    "var r; try { r = ({}) instanceof 5; } catch (e) { r = e.name; } r;",
+  )
+  let engine = @vm.Engine::new()
+  match engine.run_chunk(chunk) {
+    Ok(_) => ()
+    Err(e) => fail("unexpected: " + describe_value(e.value))
+  }
+  let v = read_global(engine, "r")
+  match v {
+    Str(s) => assert_eq(s, "TypeError")
+    _ => fail("expected TypeError name, got " + describe_value(v))
+  }
+}
+
+///|
+test "function .prototype is accessible" {
+  // Function values expose their .prototype after Step 8b2 wires it in
+  // OP_NEW_CLOSURE. And f.prototype.constructor === f.
+  expect_string("function F() {} typeof F.prototype", "object")
+  expect_bool("function F() {} F.prototype.constructor === F", true)
+}
+
+///|
+test "test_op2 fragment: new F(2) with instanceof" {
+  // Straight lift from test_op2 in quickjs/tests/test_language.js.
+  expect_int32("function F(x) { this.x = x; } var b = new F(2); b.x", 2)
+  expect_bool(
+    "function F(x) { this.x = x; } var b = new F(2); b instanceof F", true,
+  )
+}
+
+///|
+test "test_op2 fragment: {} instanceof Object" {
+  expect_bool("var a = {}; a instanceof Object", true)
+}
+
+///|
+test "test_op2 harness pattern: assert_throws-style" {
+  // Emulates the harness's assert_throws(SyntaxError, ...) but with a
+  // throw of a chosen Error subclass; verifies both that the throw
+  // propagates out of a callee and that the catch can inspect
+  // `e instanceof <ClassName>`.
+  expect_bool(
+    "var caught = false; function f() { throw new TypeError(\"nope\"); } try { f(); } catch (e) { caught = (e instanceof TypeError); } caught",
+    true,
+  )
+}
+
+///|
+test "try/catch: catch preserves .stack of caught Error object" {
+  // The catch handler receives the original exception value; its `.stack`
+  // (populated by throw_from_frame) should carry a non-empty caller chain.
+  let chunk = compile_source(
+    "function bomb() { throw new Error(\"x\"); } var msg; try { bomb(); } catch (e) { msg = e.message; }",
+  )
+  let engine = @vm.Engine::new()
+  match engine.run_chunk(chunk) {
+    Ok(_) => ()
+    Err(e) => fail("unexpected err: " + describe_value(e.value))
+  }
+  let msg = read_global(engine, "msg")
+  match msg {
+    Str(s) => assert_eq(s, "x")
+    _ => fail("expected msg Str, got " + describe_value(msg))
+  }
 }

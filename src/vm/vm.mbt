@@ -1,4 +1,4 @@
-// VM: the interpreter for M1 bytecode. Step 8b1 scope — see the parent task's
+// VM: the interpreter for M1 bytecode. Step 8b2 scope — see the parent task's
 // implement.md.
 //
 // Design references:
@@ -7,21 +7,24 @@
 // - `.trellis/spec/backend/quality-guidelines.md` (no functional `loop{}`,
 //   no `Ref[T]`, no `not(x)`, `pub(all) enum` for cross-package match).
 //
-// 8b1 delivers: object literals, property access (`.` and `[]`), array
-// literals, function calls / method calls / constructor, return, closure
-// creation with captured upvalues, `typeof` for functions.
+// 8b2 delivers on top of 8b1: try / catch / finally (OP_ENTER_TRY /
+// OP_LEAVE_TRY) with cross-frame unwind, full `instanceof` semantics with
+// prototype-chain walking, and Function `.prototype` materialisation so
+// user-defined constructors participate in `instanceof`.
 //
-// Deliberate limitations for the 8b2 handoff:
-// - Cross-frame exception unwind is not yet implemented; a `throw` still
-//   returns immediately from the current frame. Combined with 8b1 CALL
-//   support that means a throw inside a callee still propagates via
-//   `Err(...)` at the CALL arm and unwinds the caller. `try` / `catch` /
-//   `finally` handling is 8b2.
-// - `INSTANCEOF` / `IN` still error out because they need constructor
-//   prototype linking (Step 9 builtins).
-// - Builtin constructors / prototypes are still stubs. `new Object()` etc.
-//   produce a plain object (proto=Null); `String.prototype.length` etc.
-//   inline-work via the primitive-wrap fast path where possible.
+// Cross-frame unwind: OP_THROW now consults the current frame's try_stack
+// (LIFO). If there is a handler, execution resumes at the recorded
+// catch_pc and the operand stack is truncated to the depth at try entry.
+// If not, the frame returns `Err(exc)`; the CALL / CALL_METHOD / CONSTRUCT
+// arm in the caller catches that and re-runs the same unwind logic on the
+// caller. Repeated all the way up. This preserves the QuickJS-style "stack
+// trace captured at throw site, propagated frame by frame" model.
+//
+// Still deferred to later milestones:
+// - Full try/finally completion tracking. M1's compiler lowers finally as
+//   an inline block after catch (see compile_try in `src/compiler/stmt.mbt`)
+//   which does NOT run on catch-throw. That is a documented M1 limitation
+//   and does not need VM-side accommodation.
 
 // ---------------------------------------------------------------------------
 // Frame layout
@@ -526,10 +529,15 @@ fn Engine::execute_frame(
         frame.operand_stack.push(self.globals.get_property(name))
         frame.pc = cur_pc + adv
       } else {
-        // Uncaught ReferenceError per JS semantics.
+        // Uncaught ReferenceError per JS semantics — but respect any active
+        // try_stack in the current frame first.
         frame.pc = cur_pc + adv
         let err = make_error_object("ReferenceError", name + " is not defined")
-        return Err(throw_from_frame(frame, cur_pc, err))
+        let exc = throw_from_frame(frame, cur_pc, err)
+        match propagate_exception(frame, exc) {
+          Some(next) => frame = next
+          None => return Err(exc)
+        }
       }
     } else if op == @bytecode.OP_SET_GLOBAL {
       let (idx, adv) = frame.chunk.read_operand_u24(cur_pc)
@@ -693,16 +701,24 @@ fn Engine::execute_frame(
       frame.operand_stack.push(@value.Str(typeof_string(a)))
       frame.pc = cur_pc + 1
     } else if op == @bytecode.OP_INSTANCEOF {
-      // Full instanceof requires walking a constructor's `prototype` chain,
-      // which needs builtin prototype linking (Step 9 / 8b2). For 8b1 we
-      // throw TypeError so any accidental exercise surfaces cleanly.
-      let _ = pop_stack(frame)
-      let _ = pop_stack(frame)
+      // JS `x instanceof C`: walk `x`'s prototype chain looking for a proto
+      // that is physically-equal to `C.prototype`. Primitives always return
+      // false (proto walk starts from an Object). If C is not callable or its
+      // `.prototype` is not an Object, throw TypeError.
+      let ctor_val = pop_stack(frame)
+      let obj_val = pop_stack(frame)
       frame.pc = cur_pc + 1
-      let err = make_error_object(
-        "TypeError", "instanceof requires Step 8b2 / Step 9 prototype linking",
-      )
-      return Err(throw_from_frame(frame, cur_pc, err))
+      match instanceof_check(obj_val, ctor_val) {
+        Ok(b) => frame.operand_stack.push(@value.Bool(b))
+        Err(msg) => {
+          let err = make_error_object("TypeError", msg)
+          let exc = throw_from_frame(frame, cur_pc, err)
+          match propagate_exception(frame, exc) {
+            Some(next) => frame = next
+            None => return Err(exc)
+          }
+        }
+      }
     } else if op == @bytecode.OP_IN {
       // `key in obj` needs the RHS to be an Object; walks the prototype
       // chain via `Object::has_property`. 8b1 supports Object RHS; a
@@ -719,7 +735,11 @@ fn Engine::execute_frame(
           let err = make_error_object(
             "TypeError", "Cannot use 'in' operator to search in non-object",
           )
-          return Err(throw_from_frame(frame, cur_pc, err))
+          let exc = throw_from_frame(frame, cur_pc, err)
+          match propagate_exception(frame, exc) {
+            Some(next) => frame = next
+            None => return Err(exc)
+          }
         }
       }
       // ---------------- 0x40-0x49: objects & arrays ----------------
@@ -760,7 +780,11 @@ fn Engine::execute_frame(
         Ok(v) => frame.operand_stack.push(v)
         Err(msg) => {
           let err = make_error_object("TypeError", msg)
-          return Err(throw_from_frame(frame, cur_pc, err))
+          let exc = throw_from_frame(frame, cur_pc, err)
+          match propagate_exception(frame, exc) {
+            Some(next) => frame = next
+            None => return Err(exc)
+          }
         }
       }
     } else if op == @bytecode.OP_SET_PROP {
@@ -785,7 +809,14 @@ fn Engine::execute_frame(
               _ => "undefined"
             }),
           )
-          return Err(throw_from_frame(frame, cur_pc, err))
+          let exc = throw_from_frame(frame, cur_pc, err)
+          match propagate_exception(frame, exc) {
+            Some(next) => {
+              frame = next
+              continue
+            }
+            None => return Err(exc)
+          }
         }
         // Primitives silently ignore in sloppy mode.
         _ => ()
@@ -801,7 +832,11 @@ fn Engine::execute_frame(
         Ok(v) => frame.operand_stack.push(v)
         Err(msg) => {
           let err = make_error_object("TypeError", msg)
-          return Err(throw_from_frame(frame, cur_pc, err))
+          let exc = throw_from_frame(frame, cur_pc, err)
+          match propagate_exception(frame, exc) {
+            Some(next) => frame = next
+            None => return Err(exc)
+          }
         }
       }
     } else if op == @bytecode.OP_SET_ELEM {
@@ -823,7 +858,14 @@ fn Engine::execute_frame(
           let err = make_error_object(
             "TypeError", "Cannot set property of null / undefined",
           )
-          return Err(throw_from_frame(frame, cur_pc, err))
+          let exc = throw_from_frame(frame, cur_pc, err)
+          match propagate_exception(frame, exc) {
+            Some(next) => {
+              frame = next
+              continue
+            }
+            None => return Err(exc)
+          }
         }
         _ => ()
       }
@@ -910,6 +952,24 @@ fn Engine::execute_frame(
         }
       }
       let fn_value = @value.Function::new(child_id, upvalues, nested.name, true)
+      // Every user function gets a fresh `.prototype` Object whose own
+      // `[[Prototype]]` is Object.prototype. This is required for
+      // `new F(...)` (OP_CONSTRUCT reads f.prototype for the new receiver's
+      // proto) and for `instance instanceof F` (OP_INSTANCEOF walks the
+      // receiver's proto chain looking for identity match with f.prototype).
+      let fn_proto = @value.Object::new(
+        @value.Shape::new(),
+        self.object_proto_or_null(),
+      )
+      // Wire `.constructor` back to the function value itself for JS spec
+      // parity (`f.prototype.constructor === f`). This is a data property so
+      // reading it does not incur additional runtime cost.
+      fn_proto.add_property(
+        "constructor",
+        @value.Function(fn_value),
+        @value.ATTR_DEFAULT_DATA,
+      )
+      fn_value.set_prototype(@value.Object(fn_proto))
       frame.operand_stack.push(@value.Function(fn_value))
       frame.pc = cur_pc + adv
     } else if op == @bytecode.OP_CALL {
@@ -959,7 +1019,11 @@ fn Engine::execute_frame(
             Ok(v) => frame.operand_stack.push(v)
             Err(nerr) => {
               let err = self.make_error_from_native(nerr)
-              return Err(throw_from_frame(frame, cur_pc, err))
+              let exc = throw_from_frame(frame, cur_pc, err)
+              match propagate_exception(frame, exc) {
+                Some(next) => frame = next
+                None => return Err(exc)
+              }
             }
           }
         _ => {
@@ -967,7 +1031,11 @@ fn Engine::execute_frame(
             "TypeError",
             describe_call_target(callee) + " is not a function",
           )
-          return Err(throw_from_frame(frame, cur_pc, err))
+          let exc = throw_from_frame(frame, cur_pc, err)
+          match propagate_exception(frame, exc) {
+            Some(next) => frame = next
+            None => return Err(exc)
+          }
         }
       }
     } else if op == @bytecode.OP_CALL_METHOD {
@@ -1005,7 +1073,11 @@ fn Engine::execute_frame(
             Ok(v) => frame.operand_stack.push(v)
             Err(nerr) => {
               let err = self.make_error_from_native(nerr)
-              return Err(throw_from_frame(frame, cur_pc, err))
+              let exc = throw_from_frame(frame, cur_pc, err)
+              match propagate_exception(frame, exc) {
+                Some(next) => frame = next
+                None => return Err(exc)
+              }
             }
           }
         _ => {
@@ -1013,7 +1085,11 @@ fn Engine::execute_frame(
             "TypeError",
             describe_call_target(callee) + " is not a function",
           )
-          return Err(throw_from_frame(frame, cur_pc, err))
+          let exc = throw_from_frame(frame, cur_pc, err)
+          match propagate_exception(frame, exc) {
+            Some(next) => frame = next
+            None => return Err(exc)
+          }
         }
       }
     } else if op == @bytecode.OP_CONSTRUCT {
@@ -1039,18 +1115,26 @@ fn Engine::execute_frame(
               "TypeError",
               func.name() + " is not a constructor",
             )
-            return Err(throw_from_frame(frame, cur_pc, err))
+            let exc = throw_from_frame(frame, cur_pc, err)
+            match propagate_exception(frame, exc) {
+              Some(next) => {
+                frame = next
+                continue
+              }
+              None => return Err(exc)
+            }
           }
-          // Fresh receiver linked to Object.prototype for now. When M2
-          // lands class syntax the compiler will emit a specific
-          // `.prototype` reference; for pure `function F(){}` constructors
-          // the ES-spec prototype comes from the function's own
-          // `.prototype` property, which M1 does not yet materialize on
-          // user functions. Object.prototype is a safe fallback.
-          let new_obj = @value.Object::new(
-            @value.Shape::new(),
-            self.object_proto_or_null(),
-          )
+          // Materialise a fresh receiver whose `[[Prototype]]` is the
+          // function's `.prototype` object. OP_NEW_CLOSURE wires each user
+          // function's prototype to a fresh Object linked to Object.prototype,
+          // so this branch always has a real Object here. As a defensive
+          // fallback we still allow non-Object prototypes (which shouldn't
+          // happen in M1) to resolve to Object.prototype.
+          let proto : @value.JSValue = match func.prototype() {
+            Object(_) => func.prototype()
+            _ => self.object_proto_or_null()
+          }
+          let new_obj = @value.Object::new(@value.Shape::new(), proto)
           let this_val : @value.JSValue = @value.Object(new_obj)
           let chunk = self.chunk_registry[func.chunk_id()]
           let new_frame = Frame::new_for_call(
@@ -1064,7 +1148,14 @@ fn Engine::execute_frame(
               "TypeError",
               nf.name() + " is not a constructor",
             )
-            return Err(throw_from_frame(frame, cur_pc, err))
+            let exc = throw_from_frame(frame, cur_pc, err)
+            match propagate_exception(frame, exc) {
+              Some(next) => {
+                frame = next
+                continue
+              }
+              None => return Err(exc)
+            }
           }
           // Materialise a fresh receiver whose proto is nf.prototype (set
           // by builtin init) or Object.prototype as a fallback.
@@ -1086,7 +1177,11 @@ fn Engine::execute_frame(
             }
             Err(nerr) => {
               let err = self.make_error_from_native(nerr)
-              return Err(throw_from_frame(frame, cur_pc, err))
+              let exc = throw_from_frame(frame, cur_pc, err)
+              match propagate_exception(frame, exc) {
+                Some(next) => frame = next
+                None => return Err(exc)
+              }
             }
           }
         }
@@ -1095,7 +1190,11 @@ fn Engine::execute_frame(
             "TypeError",
             describe_call_target(callee) + " is not a constructor",
           )
-          return Err(throw_from_frame(frame, cur_pc, err))
+          let exc = throw_from_frame(frame, cur_pc, err)
+          match propagate_exception(frame, exc) {
+            Some(next) => frame = next
+            None => return Err(exc)
+          }
         }
       }
     } else if op == @bytecode.OP_RETURN_VAL {
@@ -1146,25 +1245,57 @@ fn Engine::execute_frame(
       } else {
         frame.pc = cur_pc + adv
       }
-      // ---------------- 0x70: throw ----------------
+      // ---------------- 0x70-0x72: try / catch / throw ----------------
+    } else if op == @bytecode.OP_ENTER_TRY {
+      // Decode signed offset (or -1 sentinel for finally-only). Operand is
+      // encoded as a wide-slot 32-bit value by `compile_try`; a value of
+      // 0xFFFFFFFF (== -1 signed) means "no catch handler", any other value
+      // is a signed offset from the pc AFTER the ENTER_TRY (matching the
+      // convention used by OP_JUMP's patch_jump).
+      let (offset, adv) = frame.chunk.read_operand_i24(cur_pc)
+      frame.pc = cur_pc + adv
+      let catch_pc = if offset == -1 { -1 } else { cur_pc + adv + offset }
+      // Record the depth of the operand stack at try-entry so `unwind_in_frame`
+      // can restore it before pushing the exception value into the catch.
+      let handler = TryHandler::new(catch_pc, -1, frame.operand_stack.length())
+      frame.try_stack.push(handler)
+    } else if op == @bytecode.OP_LEAVE_TRY {
+      // Pop the top handler. If try_stack is empty this is a compiler bug —
+      // every ENTER_TRY should be paired with a LEAVE_TRY along every normal
+      // (non-throwing) exit path.
+      if frame.try_stack.length() == 0 {
+        abort("VM: LEAVE_TRY with empty try_stack at pc=" + cur_pc.to_string())
+      }
+      let _ = frame.try_stack.pop()
+      frame.pc = cur_pc + 1
     } else if op == @bytecode.OP_THROW {
       let v = pop_stack(frame)
-      // 8b1: no try_stack unwinding (that's 8b2). Build an exception with
-      // the current caller chain as the stack trace and return.
+      // Build the exception with the current caller chain as the stack trace,
+      // then unwind across frames looking for a handler. If the throw
+      // escapes every frame (including the top-level), propagate via
+      // `Err(exc)` so `Engine::run_chunk`'s caller can inspect it.
       frame.pc = cur_pc + 1
-      return Err(throw_from_frame(frame, cur_pc, v))
+      let exc = throw_from_frame(frame, cur_pc, v)
+      match propagate_exception(frame, exc) {
+        Some(next) => frame = next
+        None => return Err(exc)
+      }
     } else {
-      // ---------------- Not implemented in 8b1 ----------------
+      // ---------------- Unimplemented opcode ----------------
       let err = make_error_object(
         "TypeError",
         "opcode 0x" +
         op.to_int().to_string(radix=16) +
         " (" +
         @bytecode.opcode_name(op) +
-        ") not implemented in Step 8b1",
+        ") not implemented",
       )
       frame.pc = cur_pc + 1
-      return Err(throw_from_frame(frame, cur_pc, err))
+      let exc = throw_from_frame(frame, cur_pc, err)
+      match propagate_exception(frame, exc) {
+        Some(next) => frame = next
+        None => return Err(exc)
+      }
     }
   }
   // Unreachable: `while true { ... }` never falls through — the loop body
@@ -1247,6 +1378,9 @@ fn get_property_value(
     Function(f) => {
       if name == "name" {
         return Ok(@value.Str(f.name()))
+      }
+      if name == "prototype" {
+        return Ok(f.prototype())
       }
       if name == "length" {
         // Functions have a `.length` of their declared parameter count.
@@ -1383,6 +1517,130 @@ fn delete_own(obj : @value.ObjectRef, name : String) -> Unit {
       }
     }
   }
+}
+
+///|
+/// Implementation of `x instanceof C` per ECMA-262 §7.3.20 (OrdinaryHasInstance).
+///
+/// - `C` must be callable; both `Function` and `NativeFn` variants qualify.
+///   Any other RHS is a `TypeError`.
+/// - `C.prototype` must be an Object; a non-Object proto (Null / Undefined /
+///   primitive) yields a `TypeError`.
+/// - `x` must be an Object for the check to succeed; primitives always return
+///   `false` per spec (`Number instanceof Number` → false).
+/// - The walk uses `physical_equal` on `ObjectRef` — matching JS "same object"
+///   semantics. `Object::proto` is the parent link.
+///
+/// Returns `Ok(true)` if the constructor's prototype appears in `x`'s chain,
+/// `Ok(false)` otherwise, `Err(msg)` on the TypeError paths.
+fn instanceof_check(
+  obj_val : @value.JSValue,
+  ctor_val : @value.JSValue,
+) -> Result[Bool, String] {
+  let target_proto : @value.JSValue = match ctor_val {
+    NativeFn(nf) => nf.prototype()
+    Function(f) => f.prototype()
+    _ => return Err("Right-hand side of instanceof is not callable")
+  }
+  let target_obj : @value.ObjectRef = match target_proto {
+    Object(o) => o
+    _ => return Err("Function has non-object prototype in instanceof check")
+  }
+  match obj_val {
+    Object(start) => {
+      let mut cur = start.proto
+      let mut result = false
+      let mut done = false
+      while !done {
+        match cur {
+          Object(op_ref) =>
+            if physical_equal(op_ref, target_obj) {
+              result = true
+              done = true
+            } else {
+              cur = op_ref.proto
+            }
+          _ => done = true
+        }
+      }
+      Ok(result)
+    }
+    _ => Ok(false)
+  }
+}
+
+///|
+/// Propagate a JS exception through the frame stack looking for the first
+/// handler that can catch it. Returns `Some(frame)` where `frame` is the
+/// frame in which the catch resumes (its `pc` has been set to the catch
+/// entry and the exception value has been pushed onto its operand stack),
+/// or `None` if the exception escaped every active frame — in which case
+/// the caller should return `Err(exc)` from `execute_frame`.
+///
+/// The walk begins at `frame` (the current frame), consults its try_stack
+/// via `unwind_in_frame`, and — on miss — follows `caller` links upward.
+/// This matches JS's semantics where a thrown exception unwinds the call
+/// stack frame by frame; each frame's try_stack acts as the local catch
+/// table.
+fn propagate_exception(frame : Frame, exc : @value.JSException) -> Frame? {
+  let mut cur : Frame? = Some(frame)
+  while true {
+    match cur {
+      None => return None
+      Some(f) =>
+        match unwind_in_frame(f, exc) {
+          Some(pc) => {
+            f.pc = pc
+            return Some(f)
+          }
+          None => cur = f.caller
+        }
+    }
+  }
+  // Unreachable — the `while true` returns from every arm.
+  None
+}
+
+///|
+/// Attempt to catch an exception in the current frame's `try_stack`.
+///
+/// Returns `Some(catch_pc)` if a handler was popped: the operand stack is
+/// truncated to the depth recorded at `OP_ENTER_TRY` and the exception value
+/// is pushed onto the stack so the catch clause's binding receives it. The
+/// caller sets `frame.pc = catch_pc` and continues execution.
+///
+/// Returns `None` if `try_stack` is empty. The caller must propagate the
+/// exception up to its own caller frame (in `OP_CALL` / `OP_CALL_METHOD` /
+/// `OP_CONSTRUCT`) or return `Err(exc)` if it is already at the top-level
+/// frame.
+///
+/// The handler entry with `catch_pc == -1` represents a `finally`-only
+/// construct (compile_try emits ENTER_TRY with a sentinel when there is no
+/// catch clause). In that case there is no user-supplied handler to run —
+/// we still pop the handler entry so `OP_LEAVE_TRY` at the end of the
+/// finally block is balanced, but return `None` (i.e. keep propagating). M1
+/// does not run the finally block on catch-throw, which is a documented
+/// limitation — see `src/compiler/stmt.mbt`'s `compile_try` for the
+/// deliberate inline-finally lowering.
+fn unwind_in_frame(frame : Frame, exc : @value.JSException) -> Int? {
+  let n = frame.try_stack.length()
+  if n == 0 {
+    return None
+  }
+  let handler = frame.try_stack[n - 1]
+  let _ = frame.try_stack.pop()
+  // For a finally-only entry (no catch), there is nothing to catch inside
+  // this handler; keep propagating.
+  if handler.catch_pc < 0 {
+    return None
+  }
+  // Truncate the operand stack to the depth recorded at ENTER_TRY.
+  while frame.operand_stack.length() > handler.operand_depth {
+    let _ = frame.operand_stack.pop()
+  }
+  // Push the exception value so the catch binding receives it.
+  frame.operand_stack.push(exc.value)
+  Some(handler.catch_pc)
 }
 
 ///|

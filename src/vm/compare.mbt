@@ -13,7 +13,7 @@
 /// - `undefined === undefined`, `null === null` → true.
 /// - Strings: character-by-character equality.
 /// - Booleans: same boolean.
-/// - Objects: identity (physical_equal).
+/// - Objects / Functions / NativeFns: identity (physical_equal).
 fn js_strict_eq(x : @value.JSValue, y : @value.JSValue) -> Bool {
   match (x, y) {
     (Undefined, Undefined) => true
@@ -29,6 +29,8 @@ fn js_strict_eq(x : @value.JSValue, y : @value.JSValue) -> Bool {
       a == b
     (Str(a), Str(b)) => a == b
     (Object(a), Object(b)) => physical_equal(a, b)
+    (Function(a), Function(b)) => physical_equal(a, b)
+    (NativeFn(a), NativeFn(b)) => physical_equal(a, b)
     _ => false
   }
 }
@@ -70,6 +72,8 @@ fn js_loose_eq(x : @value.JSValue, y : @value.JSValue) -> Bool {
     (_, Bool(_)) => js_loose_eq(x, Number(to_number(y)))
     // Object == Object → identity (same as strict).
     (Object(a), Object(b)) => physical_equal(a, b)
+    (Function(a), Function(b)) => physical_equal(a, b)
+    (NativeFn(a), NativeFn(b)) => physical_equal(a, b)
     // Object == null / undefined per spec: false. Only "IsHTMLDDA" hosts
     // permit true; we don't have those.
     (Object(_), Null)

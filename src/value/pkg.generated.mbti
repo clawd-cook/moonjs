@@ -26,11 +26,14 @@ pub struct Function {
   upvalues : Array[Upvalue]
   name : String
   is_constructor : Bool
+  mut prototype : JSValue
 } derive(@debug.Debug)
 pub fn Function::chunk_id(Self) -> Int
 pub fn Function::is_constructor(Self) -> Bool
 pub fn Function::name(Self) -> String
 pub fn Function::new(Int, Array[Upvalue], String, Bool) -> Self
+pub fn Function::prototype(Self) -> JSValue
+pub fn Function::set_prototype(Self, JSValue) -> Unit
 pub fn Function::upvalues(Self) -> Array[Upvalue]
 
 pub struct JSException {
