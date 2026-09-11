@@ -102,6 +102,8 @@ if !cond { ... }
 
 `case`, `default`, `switch`, `class`, `extends`, `this`, `new`, `super`.
 
+**Also reserved as MoonBit keyword** (found in Step 9): `impl` — used for trait implementations. Rename struct fields / variant fields to `impl_` or another name.
+
 **Problem**:
 ```moonbit
 pub(all) enum StmtKind {
