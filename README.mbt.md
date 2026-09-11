@@ -10,7 +10,7 @@ Managed under Trellis task `moonjs-js-engine`. Progress by milestone:
 
 | Milestone | Scope | Status | Coverage target |
 |---|---|---|---|
-| M1 Core VM | Lexer / parser / bytecode / VM / primitives / control flow / closures / try-catch | planning | `test_language.js` arithmetic + control-flow subset, `test_closure1..3` |
+| M1 Core VM | Lexer / parser / bytecode / VM / primitives / control flow / closures / try-catch | **done (411 tests)** | `test_language.js` arithmetic + control-flow subset, `test_closure1..3` — 13/13 AC pass |
 | M2 Language Complete | class / arrow / destructuring / spread / template / for-of / iterator / generator / with / `?.` / `??` / `using` | planning | `test_language.js` + `test_closure.js` + `test_loop.js` 100% |
 | M3 Core Builtins | Object / Array / Function / String / Number / Boolean / Math / JSON / Date / Error / Symbol / Map / Set / Weak* / Proxy / Reflect | planning | `test_builtin.js` non-regexp / non-typedarray sections 100% |
 | M4 Advanced Runtime | Promise + microtask / async-await / TypedArray / BigInt / RegExp / Unicode | planning | `test_bigint.js`, regexp / typedarray sections of `test_builtin.js`, `test_queue_microtask.js`, related bug tests |
