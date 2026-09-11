@@ -1,0 +1,23 @@
+---
+description: Run JavaScript in the browser using the MoonJS engine compiled to JS.
+pageType: doc
+---
+
+import { Playground } from '../../../src/components/Playground.tsx';
+
+# Playground
+
+Everything below runs in your browser via the MoonJS engine compiled to JS. Use `print(...)` to write to the output panel. If a script hangs, refresh the tab.
+
+<Playground initialCode={`function fib(n) {
+  return n < 2 ? n : fib(n - 1) + fib(n - 2);
+}
+print("fib(6) =", fib(6));
+fib(6);`} />
+
+## Known limits
+
+- Runs the MoonJS **M1** subset only — no arrow functions, classes, template literals, spread, destructuring, or async yet (see [Milestones](/guide/milestones/overview)).
+- No `console`, `setTimeout`, or module imports; use `print(...)` to inspect intermediate values.
+- Errors show precise `line:col` from parser and runtime.
+- Long-running scripts freeze the tab — refresh if that happens. A future version may isolate execution in a Web Worker.

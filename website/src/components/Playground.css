@@ -1,0 +1,123 @@
+.moonjs-playground {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid var(--rp-c-divider, #d1d5db);
+  border-radius: 8px;
+  padding: 16px;
+  background: var(--rp-c-bg-soft, #f9fafb);
+  margin: 16px 0;
+}
+
+.moonjs-playground__samples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.moonjs-playground__samples-label {
+  font-size: 13px;
+  color: var(--rp-c-text-2, #666);
+  margin-right: 4px;
+}
+
+.moonjs-playground__samples button {
+  font-size: 12px;
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid var(--rp-c-divider, #d1d5db);
+  border-radius: 4px;
+  color: var(--rp-c-text-1, #111);
+  cursor: pointer;
+}
+
+.moonjs-playground__samples button:hover {
+  border-color: var(--rp-c-brand, #3b82f6);
+  color: var(--rp-c-brand, #3b82f6);
+}
+
+.moonjs-playground__source {
+  font-family: var(
+    --rp-font-family-code,
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace
+  );
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 12px;
+  border: 1px solid var(--rp-c-divider, #d1d5db);
+  border-radius: 6px;
+  background: var(--rp-c-bg, #fff);
+  color: var(--rp-c-text-1, #111);
+  resize: vertical;
+  min-height: 160px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.moonjs-playground__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.moonjs-playground__run {
+  padding: 8px 20px;
+  background: var(--rp-c-brand, #3b82f6);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.moonjs-playground__run:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.moonjs-playground__panel {
+  border-radius: 6px;
+  padding: 12px;
+  background: var(--rp-c-bg, #fff);
+  border: 1px solid var(--rp-c-divider, #d1d5db);
+}
+
+.moonjs-playground__panel--ok {
+  border-color: #10b981;
+}
+
+.moonjs-playground__panel--error {
+  border-color: #ef4444;
+}
+
+.moonjs-playground__panel--stdout {
+  border-color: #6b7280;
+}
+
+.moonjs-playground__panel-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--rp-c-text-2, #666);
+  margin-bottom: 6px;
+}
+
+.moonjs-playground__panel pre {
+  margin: 0;
+  font-family: var(
+    --rp-font-family-code,
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace
+  );
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--rp-c-text-1, #111);
+  white-space: pre-wrap;
+  word-break: break-word;
+}

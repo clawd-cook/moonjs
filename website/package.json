@@ -8,7 +8,8 @@
     "dev": "rspress dev",
     "format": "prettier --write .",
     "lint": "rslint",
-    "preview": "rspress preview"
+    "preview": "rspress preview",
+    "rebuild:engine": "cd .. && moon build --target js --release && mkdir -p website/src/moonjs-playground && cp _build/js/release/build/cmd/moonjs-playground/moonjs-playground.js website/src/moonjs-playground/ && cp _build/js/release/build/cmd/moonjs-playground/moonjs-playground.d.ts website/src/moonjs-playground/ && cp _build/js/release/build/cmd/moonjs-playground/moonbit.d.ts website/src/moonjs-playground/"
   },
   "dependencies": {
     "@rspress/core": "^2.0.19"

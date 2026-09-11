@@ -1,0 +1,9 @@
+{"file": "AGENTS.md", "reason": "MoonBit conventions (block style, moon fmt/info/test) all sub-agent implementations inherit."}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Every accumulated MoonBit rule (derive-Debug not Show, no loop{}, no not(x), reserved keywords incl. impl, no fs in stdlib, etc.) applies to cmd/moonjs-playground."}
+{"file": ".trellis/tasks/09-11-web-playground/prd.md", "reason": "Q1..Q6 decisions, requirements, and acceptance criteria for this dispatch."}
+{"file": ".trellis/tasks/09-11-web-playground/design.md", "reason": "Module map (cmd/moonjs-playground + website/src/*), MoonBit-side EvalOutput contract, JS-like formatter table, React component SSR-safety plan."}
+{"file": ".trellis/tasks/09-11-web-playground/implement.md", "reason": "Ordered steps 1..7 with validation criteria per step."}
+{"file": "src/vm/pkg.generated.mbti", "reason": "Engine and eval_script API surface — playground imports and wraps these."}
+{"file": "src/value/pkg.generated.mbti", "reason": "JSValue variants, JSException / StackFrameInfo shape, NativeFunction API for the print builtin."}
+{"file": "cmd/moonjs/moon.pkg", "reason": "Reference config for a Moon package that produces a JS-target executable; playground uses foreign_library instead."}
+{"file": "cmd/moonjs/main.mbt", "reason": "Reference invocation pattern of @lib.eval_script from a cmd package."}

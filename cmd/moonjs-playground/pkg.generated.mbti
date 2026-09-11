@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "heyq02/moonjs/cmd/moonjs-playground"
+
+// Values
+pub fn engine_smoke() -> Int
+
+pub fn eval_and_format(String, String) -> EvalOutput
+
+// Errors
+
+// Types and methods
+pub struct EvalOutput {
+  kind : String
+  value : String
+  error : String
+  stdout : String
+}
+
+// Type aliases
+
+// Traits

@@ -1,0 +1,6 @@
+{"file": "AGENTS.md", "reason": "Toolchain gate: moon fmt/info/check --deny-warn/test still enforced."}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Reserved-keyword renames, mbti audit, block style all still apply."}
+{"file": ".trellis/tasks/09-11-web-playground/prd.md", "reason": "Authoritative acceptance criteria for this check."}
+{"file": ".trellis/tasks/09-11-web-playground/design.md", "reason": "Contracts to verify: EvalOutput shape, dynamic-import SSR-safety, JS-like formatter cases."}
+{"file": "src/vm/pkg.generated.mbti", "reason": "Verify the playground package doesn't accidentally regress or shadow existing VM API."}
+{"file": "src/value/pkg.generated.mbti", "reason": "Same: additive-only contract on JSValue; playground must not introduce a new variant."}

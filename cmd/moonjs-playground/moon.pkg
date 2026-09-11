@@ -1,0 +1,22 @@
+// cmd/moonjs-playground — a JS-target foreign_library wrapping the MoonJS
+// engine so the docs website can compile & run JavaScript in the browser.
+//
+// This package exposes exactly one API function, `eval_and_format`, which
+// takes source text and a filename and returns a JS-visible struct with
+// (kind, value, error, stdout) fields. The website's React `<Playground>`
+// component imports the emitted ESM bundle via dynamic import and calls
+// `eval_and_format` on every Run.
+//
+// See `.trellis/tasks/09-11-web-playground/design.md` for the full contract.
+
+import {
+  "heyq02/moonjs" @lib,
+  "heyq02/moonjs/src/value",
+  "heyq02/moonjs/src/vm",
+}
+
+import {
+  "moonbitlang/core/test",
+} for "wbtest"
+
+pkgtype(kind: "foreign_library")

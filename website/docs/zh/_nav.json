@@ -10,6 +10,10 @@
     "activeMatch": "/api/"
   },
   {
+    "text": "Playground",
+    "link": "/zh/guide/playground"
+  },
+  {
     "text": "里程碑",
     "link": "/zh/guide/milestones/overview"
   }

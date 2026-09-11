@@ -1,0 +1,23 @@
+---
+description: 在浏览器中使用编译为 JS 的 MoonJS 引擎运行 JavaScript。
+pageType: doc
+---
+
+import { Playground } from '../../../src/components/Playground.tsx';
+
+# Playground
+
+以下代码都在你的浏览器里通过编译为 JS 的 MoonJS 引擎运行。用 `print(...)` 把值写到输出面板。若脚本卡死，刷新页面即可。
+
+<Playground initialCode={`function fib(n) {
+  return n < 2 ? n : fib(n - 1) + fib(n - 2);
+}
+print("fib(6) =", fib(6));
+fib(6);`} />
+
+## 已知限制
+
+- 目前只运行 MoonJS **M1** 子集 —— 尚不支持 arrow function、class、模板字符串、spread、destructuring、async（见 [里程碑](/zh/guide/milestones/overview)）。
+- 没有 `console`、`setTimeout`、模块 import；用 `print(...)` 观察中间值。
+- 错误显示精确的 `line:col`（parser 与运行时）。
+- 长时间运行的脚本会卡住页面 —— 遇到时刷新即可。未来可能通过 Web Worker 隔离执行。
