@@ -25,7 +25,8 @@
     "09-10-m4-advanced-runtime",
     "09-10-m5-modules-cli",
     "09-10-m6-test262",
-    "09-11-web-playground"
+    "09-11-web-playground",
+    "09-11-wasm-release-artifact"
   ],
   "parent": null,
   "relatedFiles": [],

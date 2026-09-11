@@ -6,8 +6,11 @@
   "scripts": {
     "build": "rspress build",
     "dev": "rspress dev",
+    "fetch:engine": "node scripts/fetch-engine.mjs",
     "format": "prettier --write .",
     "lint": "rslint",
+    "predev": "node scripts/fetch-engine.mjs",
+    "prebuild": "node scripts/fetch-engine.mjs",
     "preview": "rspress preview",
     "rebuild:engine": "cd .. && moon build --target js --release && mkdir -p website/src/moonjs-playground && cp _build/js/release/build/cmd/moonjs-playground/moonjs-playground.js website/src/moonjs-playground/ && cp _build/js/release/build/cmd/moonjs-playground/moonjs-playground.d.ts website/src/moonjs-playground/ && cp _build/js/release/build/cmd/moonjs-playground/moonbit.d.ts website/src/moonjs-playground/"
   },

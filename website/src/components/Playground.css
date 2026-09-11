@@ -57,6 +57,20 @@
   cursor: not-allowed;
 }
 
+.moonjs-playground__version {
+  font-size: 11px;
+  color: var(--rp-c-text-2, #666);
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+}
+
+.moonjs-playground__version:hover {
+  border-color: var(--rp-c-divider, #d1d5db);
+  color: var(--rp-c-brand, #3b82f6);
+}
+
 /* Split view: editor on the left, output on the right. Stacks on narrow
    viewports where each pane needs the full width to stay legible. */
 .moonjs-playground__split {

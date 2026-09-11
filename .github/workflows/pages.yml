@@ -14,6 +14,12 @@ on:
       - 'website/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
+  workflow_run:
+    # Redeploy the site whenever a Release run succeeds so the fresh engine
+    # bundle uploaded as a release asset ends up on the live site.
+    workflows: ['Release']
+    types: [completed]
+    branches: [master]
 
 permissions:
   contents: read
@@ -30,6 +36,10 @@ jobs:
     name: Build docs site
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # For workflow_run triggers, only fire on green Release runs.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
     permissions:
       contents: read
 
@@ -55,6 +65,12 @@ jobs:
 
       - name: Rspress build
         working-directory: website
+        env:
+          # Pass GITHUB_TOKEN to `pnpm build`, which triggers `prebuild:fetch-engine`
+          # (see website/scripts/fetch-engine.mjs). With a token, GitHub API
+          # gives 1000 req/hr; without one, anon runners share a very low
+          # anonymous quota that would sometimes fail cold builds.
+          GITHUB_TOKEN: ${{ github.token }}
         run: pnpm build
 
       - name: Verify build output

@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, ChangeEvent } from 'react';
+import versionInfo from '../moonjs-playground/version.json';
 import './Playground.css';
+
+type VersionInfo = {
+  tag?: string;
+  commit?: string;
+  downloaded_at?: string;
+  notice?: string;
+};
+
+const version: VersionInfo = versionInfo as VersionInfo;
 
 type EvalOutput = {
   kind: 'ok' | 'error';
@@ -176,6 +186,23 @@ export function Playground({ initialCode = '' }: PlaygroundProps) {
           </button>
         ))}
         <span className="moonjs-playground__toolbar-spacer" />
+        {version.tag && (
+          <a
+            className="moonjs-playground__version"
+            href={`https://github.com/clawd-cook/moonjs/releases/tag/${version.tag}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={
+              version.notice ??
+              (version.downloaded_at
+                ? `Fetched ${version.downloaded_at}`
+                : 'MoonJS engine version')
+            }
+          >
+            Engine {version.tag}
+            {version.notice ? ' ⚠' : ''}
+          </a>
+        )}
         <button
           className="moonjs-playground__run"
           type="button"

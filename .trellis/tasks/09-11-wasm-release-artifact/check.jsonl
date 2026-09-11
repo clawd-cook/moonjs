@@ -1,0 +1,8 @@
+{"file": "AGENTS.md", "reason": "Toolchain gates for any MoonBit-touching step."}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Consistency."}
+{"file": ".trellis/tasks/09-11-wasm-release-artifact/prd.md", "reason": "AC checklist verifier."}
+{"file": ".trellis/tasks/09-11-wasm-release-artifact/design.md", "reason": "Cross-workflow contract; verify implementation matches (upload artifact naming, workflow_run gate, never-fail fetch-engine.mjs)."}
+{"file": ".trellis/tasks/09-11-wasm-release-artifact/implement.md", "reason": "Per-step validation."}
+{"file": ".github/workflows/release.yml", "reason": "Verify JS bundle upload wired without regressing publish-mooncakes."}
+{"file": ".github/workflows/pages.yml", "reason": "Verify workflow_run trigger + conditional gate."}
+{"file": "website/package.json", "reason": "Verify prebuild / predev / fetch:engine scripts wired without breaking existing rebuild:engine."}

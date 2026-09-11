@@ -1,0 +1,9 @@
+{"file": "AGENTS.md", "reason": "MoonBit project conventions used across the codebase."}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Every accumulated MoonBit rule; nothing here touches MoonBit code but the same toolchain gates apply to the release workflow's build step."}
+{"file": ".trellis/tasks/09-11-wasm-release-artifact/prd.md", "reason": "Rescope note, Q2..Q6 decisions, requirements, acceptance criteria."}
+{"file": ".trellis/tasks/09-11-wasm-release-artifact/design.md", "reason": "Cross-workflow data flow, fetch-engine.mjs shape, Playground UI touchpoint, workflow gate expression."}
+{"file": ".trellis/tasks/09-11-wasm-release-artifact/implement.md", "reason": "Ordered steps 1..6 with validation criteria per step."}
+{"file": ".github/workflows/release.yml", "reason": "Where the JS bundle asset upload lands."}
+{"file": ".github/workflows/pages.yml", "reason": "Where the workflow_run trigger and gate land."}
+{"file": "website/package.json", "reason": "Where fetch:engine / prebuild / predev scripts land."}
+{"file": "website/src/components/Playground.tsx", "reason": "Where the version caption lands."}
