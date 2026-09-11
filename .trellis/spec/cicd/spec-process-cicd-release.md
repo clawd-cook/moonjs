@@ -54,7 +54,7 @@ graph TD
 | Job Name | Purpose | Dependencies | Execution Context |
 |----------|---------|--------------|-------------------|
 | `verify` | Pre-release quality gate. Compiles both targets, runs full test suite, confirms `moon.mod:version` matches the pushed tag. Blocks downstream jobs on any failure. | none | `ubuntu-latest`, MoonBit toolchain installed inline |
-| `publish-mooncakes` | Runs `moon publish` against mooncakes.io with the CI credential injected. Uploads the module artefact. | `verify` succeeds | `ubuntu-latest`, MoonBit toolchain, `MOON_CREDENTIAL` secret in env |
+| `publish-mooncakes` | Runs `moon publish` against mooncakes.io with the CI credential injected. Uploads the module artefact. | `verify` succeeds | `ubuntu-latest`, MoonBit toolchain, `MOON_CAKE_TOKEN` + `MOON_CAKE_USERNAME` secrets in env |
 | `github-release` | Creates or updates a GitHub Release for the tag, attaches auto-generated release notes and a source tarball. Runs in parallel with `publish-mooncakes` to reduce wall clock. | `verify` succeeds | `ubuntu-latest`, `contents: write` permission |
 
 Parallelism note: `publish-mooncakes` and `github-release` execute independently after `verify`; failure of one does NOT abort the other (each is idempotent and can be retried).
@@ -79,10 +79,10 @@ Parallelism note: `publish-mooncakes` and `github-release` execute independently
 
 | ID | Requirement | Implementation Constraint |
 |----|-------------|---------------------------|
-| SEC-001 | Mooncakes credential is a repository secret | Stored as `MOON_CREDENTIAL` secret; the workflow writes it to `~/.moon/credentials.json` **only inside the `publish-mooncakes` job**; masked in logs. |
+| SEC-001 | Mooncakes credential is a pair of repository/organization secrets | Stored as `MOON_CAKE_TOKEN` + `MOON_CAKE_USERNAME`; the workflow assembles them into `~/.moon/credentials.json` **only inside the `publish-mooncakes` job**, deletes the file when the job ends. Both are masked in logs. |
 | SEC-002 | Least-privilege token scope | `permissions:` block on each job requests only what it needs. `verify`: `contents: read`. `publish-mooncakes`: `contents: read`. `github-release`: `contents: write`. |
 | SEC-003 | Third-party actions pinned | Every `uses:` action is pinned to a full commit SHA, not a floating tag. |
-| SEC-004 | No token echo | The `MOON_CREDENTIAL` value never appears in `run:` commands as an argument (piped through env only). `set +x` maintained during credential-file writes. |
+| SEC-004 | No token echo | The `MOON_CAKE_TOKEN` value never appears in `run:` commands as an argument (passed via env only). `set +x` maintained during credential-file writes. |
 | SEC-005 | Submodule handling | Checkout uses `submodules: 'recursive'` only if `quickjs/` is needed for verification; the `test262` sub-submodule stays uninitialized (test262 is not needed for M1..M5 releases). |
 
 ### Performance Requirements
@@ -137,7 +137,8 @@ source_tarball: file              # moonjs-vX.Y.Z-source.tar.gz attached to Rele
 
 | Type | Name | Purpose | Scope |
 |------|------|---------|-------|
-| Secret | `MOON_CREDENTIAL` | Contents of `~/.moon/credentials.json` — `{"token": "…", "username": "heyq02"}`. Used by `moon publish` to authenticate against mooncakes.io. | Workflow (only `publish-mooncakes` reads it) |
+| Secret | `MOON_CAKE_TOKEN` | The API token half of the mooncakes.io credential. Injected only into `publish-mooncakes`; assembled into `~/.moon/credentials.json` at job runtime. | Workflow (only `publish-mooncakes` reads it) |
+| Secret | `MOON_CAKE_USERNAME` | The username half of the mooncakes.io credential (currently `heyq02`). Pairs with `MOON_CAKE_TOKEN`. | Workflow (only `publish-mooncakes` reads it) |
 | Secret | `GITHUB_TOKEN` | Auto-provided by GitHub Actions. Used by `github-release` for the Release API call. | Auto-managed, per-job |
 | Variable | `MOONBIT_VERSION` | Optional pin of MoonBit toolchain version. If unset, install steps default to the latest stable published to `cli.moonbitlang.com`. | Repository |
 
@@ -225,8 +226,8 @@ source_tarball: file              # moonjs-vX.Y.Z-source.tar.gz attached to Rele
 
 ### Security Controls
 
-- **Access Control**: `MOON_CREDENTIAL` secret is only readable by admin/maintainers; not exposed in PR runs from forks (see SEC-004).
-- **Secret Management**: `MOON_CREDENTIAL` should be rotated when the mooncakes token is regenerated (no fixed schedule; rotate on personnel changes).
+- **Access Control**: The `MOON_CAKE_TOKEN` / `MOON_CAKE_USERNAME` secrets are only readable by admin/maintainers; not exposed in PR runs from forks (see SEC-004).
+- **Secret Management**: The mooncakes token secret should be rotated when the mooncakes-side token is regenerated (no fixed schedule; rotate on personnel changes).
 - **Vulnerability Scanning**: MoonBit toolchain is pinned to a specific version tag when a supply-chain concern arises; otherwise `latest`.
 
 ## Edge Cases & Exceptions
@@ -241,7 +242,7 @@ source_tarball: file              # moonjs-vX.Y.Z-source.tar.gz attached to Rele
 | `github-release` re-run | Existing Release is patched (title + body + asset re-uploaded) via `gh release edit` fallback | `workflow_dispatch` on a released tag |
 | Pre-release tag (`v0.2.0-rc.1`) | Same pipeline, but `github-release` marks the Release as pre-release when the tag has a `-suffix` | Push `v0.2.0-rc.1` |
 | Manual `workflow_dispatch` with a non-existent tag | Job fails fast at checkout | Manual test |
-| `MOON_CREDENTIAL` missing | `publish-mooncakes` fails at the credential-write step with a masked "missing secret" message; `github-release` proceeds normally | Un-set secret in a test clone |
+| `MOON_CAKE_TOKEN` or `MOON_CAKE_USERNAME` missing | `publish-mooncakes` fails fast at the credential-write step with an explicit "missing secret" message; `github-release` proceeds normally | Un-set one of the secrets in a test clone |
 | Docs site build fails | `verify` fails; nothing is released. | `pnpm build` reproduces failure locally |
 | `quickjs/` submodule not initialized | Not required — releases don't ship `quickjs/`; the tarball explicitly excludes it | See REQ-006 |
 

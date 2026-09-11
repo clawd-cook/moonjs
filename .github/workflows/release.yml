@@ -1,0 +1,292 @@
+name: Release
+
+# Publish MoonJS to mooncakes.io and create a GitHub Release when a version
+# tag is pushed. Spec: .trellis/spec/cicd/spec-process-cicd-release.md
+#
+# Trigger:
+#   - Push of a semver tag `v*.*.*` (e.g. v0.1.0, v1.2.3-rc.1)
+#   - Manual re-run via workflow_dispatch with the tag name
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to (re-)release, e.g. v0.1.0'
+        required: true
+        type: string
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # verify — quality gate. Must succeed before any publish step runs.
+  # ---------------------------------------------------------------------------
+  verify:
+    name: Verify release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+      version: ${{ steps.resolve.outputs.version }}
+      is_prerelease: ${{ steps.resolve.outputs.is_prerelease }}
+
+    steps:
+      - name: Resolve tag and version
+        id: resolve
+        env:
+          MANUAL_TAG: ${{ github.event.inputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tag="${MANUAL_TAG}"
+          else
+            tag="${REF_NAME}"
+          fi
+          if [ -z "${tag}" ]; then
+            echo "::error::Unable to resolve tag name" >&2
+            exit 1
+          fi
+          if ! echo "${tag}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::Tag '${tag}' does not match v<MAJOR>.<MINOR>.<PATCH>[-<pre>]" >&2
+            exit 1
+          fi
+          version="${tag#v}"
+          if echo "${version}" | grep -q '-'; then
+            prerelease="true"
+          else
+            prerelease="false"
+          fi
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "is_prerelease=${prerelease}" >> "$GITHUB_OUTPUT"
+          echo "Resolved: tag=${tag}, version=${version}, prerelease=${prerelease}"
+
+      - name: Checkout (tag)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ steps.resolve.outputs.tag }}
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Verify moon.mod version matches tag
+        env:
+          EXPECTED: ${{ steps.resolve.outputs.version }}
+        run: |
+          set -euo pipefail
+          actual="$(grep -E '^version[[:space:]]*=' moon.mod | head -n1 | sed -E 's/.*"([^"]+)".*/\1/')"
+          if [ -z "${actual}" ]; then
+            echo "::error::Could not find version in moon.mod" >&2
+            exit 1
+          fi
+          if [ "${actual}" != "${EXPECTED}" ]; then
+            echo "::error::moon.mod version '${actual}' != tag version '${EXPECTED}'" >&2
+            echo "Bump moon.mod:version to ${EXPECTED} and re-tag." >&2
+            exit 1
+          fi
+          echo "moon.mod version aligned with tag: ${actual}"
+
+      - name: Install MoonBit toolchain
+        run: |
+          set -euo pipefail
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Show MoonBit versions
+        run: moon version --all
+
+      - name: moon fmt (idempotency check)
+        run: |
+          set -euo pipefail
+          moon fmt
+          if ! git diff --quiet; then
+            echo "::error::moon fmt produced changes. Run 'moon fmt' locally and re-tag." >&2
+            git --no-pager diff
+            exit 1
+          fi
+
+      - name: moon check --deny-warn --target native
+        run: moon check --deny-warn --target native
+
+      - name: moon check --deny-warn --target js
+        run: moon check --deny-warn --target js
+
+      - name: moon test --target native
+        run: moon test --target native
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: website/pnpm-lock.yaml
+
+      - name: pnpm install (website)
+        working-directory: website
+        run: pnpm install --frozen-lockfile
+
+      - name: pnpm build (docs site)
+        working-directory: website
+        run: pnpm build
+
+  # ---------------------------------------------------------------------------
+  # publish-mooncakes — publish the module to mooncakes.io
+  # ---------------------------------------------------------------------------
+  publish-mooncakes:
+    name: Publish to mooncakes.io
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout (tag)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ needs.verify.outputs.tag }}
+          submodules: recursive
+
+      - name: Install MoonBit toolchain
+        run: |
+          set -euo pipefail
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Write mooncakes credentials
+        env:
+          MOONCAKE_TOKEN: ${{ secrets.MOON_CAKE_TOKEN }}
+          MOONCAKE_USERNAME: ${{ secrets.MOON_CAKE_USERNAME }}
+        run: |
+          set +x
+          set -euo pipefail
+          if [ -z "${MOONCAKE_TOKEN}" ] || [ -z "${MOONCAKE_USERNAME}" ]; then
+            echo "::error::MOON_CAKE_TOKEN and MOON_CAKE_USERNAME secrets must be set" >&2
+            exit 1
+          fi
+          mkdir -p "$HOME/.moon"
+          umask 077
+          printf '{"token":"%s","username":"%s"}\n' "${MOONCAKE_TOKEN}" "${MOONCAKE_USERNAME}" \
+            > "$HOME/.moon/credentials.json"
+          echo "Credentials written for user ${MOONCAKE_USERNAME}"
+
+      - name: moon publish
+        id: publish
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          moon publish 2>&1 | tee /tmp/publish.log
+
+      - name: Interpret publish result
+        env:
+          PUBLISH_OUTCOME: ${{ steps.publish.outcome }}
+          MODULE_VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          log="/tmp/publish.log"
+          # Treat "already exists" as a soft failure (workflow keeps going);
+          # any other non-zero outcome is a hard failure.
+          if [ "${PUBLISH_OUTCOME}" = "success" ]; then
+            echo "moon publish succeeded for version ${MODULE_VERSION}"
+            exit 0
+          fi
+          if grep -qiE 'already[[:space:]]+(exists|published)|duplicate' "${log}"; then
+            echo "::warning::mooncakes reports version ${MODULE_VERSION} is already published; treating as non-fatal"
+            exit 0
+          fi
+          echo "::error::moon publish failed (see log above)"
+          exit 1
+
+      - name: Remove credentials
+        if: always()
+        run: rm -f "$HOME/.moon/credentials.json"
+
+  # ---------------------------------------------------------------------------
+  # github-release — create or update the GitHub Release
+  # ---------------------------------------------------------------------------
+  github-release:
+    name: Create GitHub Release
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout (tag)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ needs.verify.outputs.tag }}
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Build source tarball
+        env:
+          TAG: ${{ needs.verify.outputs.tag }}
+        run: |
+          set -euo pipefail
+          workdir="$(mktemp -d)"
+          out="${workdir}/moonjs-${TAG}-source.tar.gz"
+          # Excludes:
+          #   .git*         local git metadata
+          #   _build        MoonBit build cache
+          #   doc_build     rspress build output
+          #   node_modules  pnpm store
+          #   quickjs/test262 (uninitialized submodule; not needed by consumers)
+          tar --exclude='.git' \
+              --exclude='.github' \
+              --exclude='_build' \
+              --exclude='doc_build' \
+              --exclude='node_modules' \
+              --exclude='quickjs/test262' \
+              --exclude='website/doc_build' \
+              --exclude='website/node_modules' \
+              --exclude='.trellis/workspace' \
+              -czf "${out}" \
+              --transform "s,^,moonjs-${TAG}/," \
+              .
+          ls -lh "${out}"
+          echo "TARBALL=${out}" >> "$GITHUB_ENV"
+
+      - name: Create or update Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.verify.outputs.tag }}
+          VERSION: ${{ needs.verify.outputs.version }}
+          IS_PRERELEASE: ${{ needs.verify.outputs.is_prerelease }}
+        run: |
+          set -euo pipefail
+          title="MoonJS ${TAG}"
+          notes_flag=(--generate-notes)
+          prerelease_flag=()
+          if [ "${IS_PRERELEASE}" = "true" ]; then
+            prerelease_flag+=(--prerelease)
+          fi
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            echo "Release ${TAG} exists; updating in place"
+            gh release edit "${TAG}" \
+              --title "${title}" \
+              "${prerelease_flag[@]}" || true
+            gh release upload "${TAG}" "${TARBALL}" --clobber
+          else
+            echo "Creating release ${TAG}"
+            gh release create "${TAG}" "${TARBALL}" \
+              --title "${title}" \
+              "${notes_flag[@]}" \
+              "${prerelease_flag[@]}"
+          fi
