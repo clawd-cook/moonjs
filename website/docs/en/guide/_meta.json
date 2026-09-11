@@ -6,7 +6,12 @@
   },
   {
     "type": "dir-section-header",
-    "name": "use-mdx",
-    "label": "Markdown & MDX"
+    "name": "architecture",
+    "label": "Architecture"
+  },
+  {
+    "type": "dir-section-header",
+    "name": "milestones",
+    "label": "Milestones"
   }
 ]

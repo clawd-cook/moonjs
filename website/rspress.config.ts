@@ -3,8 +3,8 @@ import { defineConfig } from '@rspress/core';
 
 export default defineConfig({
   root: path.join(__dirname, 'docs'),
-  title: 'My Site',
-  description: 'A multilingual Rspress documentation site.',
+  title: 'MoonJS',
+  description: 'A pure-MoonBit JavaScript engine targeting the QuickJS test corpus and TC39 test262.',
   lang: 'en',
   icon: '/rspress-icon.png',
   logo: {
@@ -15,14 +15,16 @@ export default defineConfig({
     {
       lang: 'en',
       label: 'English',
-      title: 'My Site',
-      description: 'A multilingual Rspress documentation site.',
+      title: 'MoonJS',
+      description:
+        'A pure-MoonBit JavaScript engine targeting the QuickJS test corpus and TC39 test262.',
     },
     {
       lang: 'zh',
       label: '简体中文',
-      title: '我的站点',
-      description: '一个多语言 Rspress 文档站点。',
+      title: 'MoonJS',
+      description:
+        '一个用纯 MoonBit 实现的 JavaScript 引擎，目标通过 QuickJS 和 test262 全部用例。',
     },
   ],
   themeConfig: {
@@ -30,8 +32,11 @@ export default defineConfig({
       {
         icon: 'github',
         mode: 'link',
-        content: 'https://github.com/web-infra-dev/rspress',
+        content: 'https://github.com/clawd-cook/moonjs',
       },
     ],
+    footer: {
+      message: 'Released under the Apache-2.0 License.',
+    },
   },
 });

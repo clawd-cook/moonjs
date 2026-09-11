@@ -1,44 +1,44 @@
 ---
-description: Rspress starter homepage with guide, MDX, search, AI, SSG, and theme customization links.
+description: MoonJS is a pure-MoonBit JavaScript engine — landing page with quick-start, architecture, and milestone highlights.
 pageType: home
 
 hero:
-  name: My Site
-  text: A cool website!
-  tagline: This is the tagline
+  name: MoonJS
+  text: JavaScript on MoonBit
+  tagline: A pure-MoonBit JavaScript engine targeting the QuickJS test corpus and TC39 test262.
   actions:
     - theme: brand
-      text: Quick Start
+      text: Get Started
       link: /guide/start/introduction
     - theme: alt
       text: GitHub
-      link: https://github.com/web-infra-dev/rspress
+      link: https://github.com/clawd-cook/moonjs
   image:
     src: /rspress-icon.png
-    alt: Logo
+    alt: MoonJS
 features:
-  - title: Blazing fast build speed
-    details: The core compilation module is based on the Rust front-end toolchain, providing a more ultimate development experience.
-    icon: 🏃🏻‍♀️
-    link: /guide/start/introduction
-  - title: Support for MDX content writing
-    details: MDX is a powerful way to write content, allowing you to use React components in Markdown.
-    icon: 📦
-    link: /guide/use-mdx/components
-  - title: Built-in full-text search
-    details: Automatically generates a full-text search index for you during construction, providing out-of-the-box full-text search capabilities.
-    icon: 🎨
-    link: https://rspress.rs/guide/advanced/custom-search
-  - title: AI-friendly
-    details: Generate llms.txt and Markdown files compliant with the llms.txt specification through SSG-MD, making it easier for large language models to understand and use your documentation.
-    icon: 🤖
-    link: https://rspress.rs/guide/basic/ssg-md
-  - title: Static site generation
-    details: In production, it automatically builds into static HTML files, which can be easily deployed anywhere.
-    icon: 🌈
-    link: https://rspress.rs/guide/basic/ssg
-  - title: Providing multiple custom capabilities
-    details: Through its extension mechanism, you can easily extend theme UI and build process.
-    icon: 🔥
-    link: https://rspress.rs/guide/basic/custom-theme
+  - title: Pure MoonBit
+    details: No C FFI. Compiles on native / wasm-gc / js targets. Uses only moonbitlang/core.
+    icon: 🌙
+    link: /guide/architecture/overview
+  - title: Bytecode VM
+    details: 32-bit fixed-length instructions, Shape-based objects, Lua-style upvalue capture. Reference opcode set aligned with QuickJS.
+    icon: ⚙️
+    link: /guide/architecture/bytecode
+  - title: ES2023+ syntax
+    details: Full lexer and parser covering the complete ES2023+ grammar. M1 compiler runs a control-flow + closures subset today.
+    icon: 📝
+    link: /guide/architecture/pipeline
+  - title: QuickJS parity as spec
+    details: quickjs/tests/*.js and TC39 test262 (pinned commit) are the ground truth. M1 already passes 13/13 acceptance criteria.
+    icon: 🎯
+    link: /guide/milestones/overview
+  - title: Precise error locations
+    details: Every AST node carries a SourceSpan; every bytecode instruction has a parallel SourceLoc. Exceptions render `line:col` stack traces.
+    icon: 📍
+    link: /guide/architecture/pipeline
+  - title: Milestone-driven
+    details: Six milestones (M1 core VM → M6 test262 sprint) planned in the open. M1 done, M2 next.
+    icon: 🗺️
+    link: /guide/milestones/overview
 ---

@@ -6,7 +6,7 @@
   },
   {
     "type": "file",
-    "name": "commands",
-    "label": "命令"
+    "name": "engine",
+    "label": "Engine"
   }
 ]

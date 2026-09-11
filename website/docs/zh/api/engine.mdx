@@ -1,0 +1,64 @@
+---
+description: MoonJS Engine API —— new_engine、eval_script、run_chunk、JSValue variant、JSException 形状。
+---
+
+# Engine API
+
+## `new_engine() -> Engine`
+
+便捷构造器。等价于 `Engine::new()`。在全新的全局作用域上安装内置对象（`Object`、`Error` 家族、`String`、`undefined`、`NaN`、`Infinity`、`globalThis`）。
+
+```moonbit
+let engine = @moonjs.new_engine()
+```
+
+## `eval_script(source: String, filename: String) -> Result[JSValue, JSException]`
+
+根 package 顶层入口。Parse → compile → run。
+
+```moonbit
+match @moonjs.eval_script("1 + 2 * 3", "<inline>") {
+  Ok(v) => println("result: \{v}")
+  Err(exc) => println("uncaught: \{exc}")
+}
+```
+
+`Parse` 与 `Compile` 错误被包装为 `SyntaxError` 形状的 `JSException`，携带 `line:col`。运行时错误保留原始类别（`TypeError`、`ReferenceError`、`Error`、用户 throw）。
+
+## `Engine::run_chunk(chunk: Chunk) -> Result[JSValue, JSException]`
+
+当你已经有一个编译好的 `Chunk` 时的更低层入口（例如做嵌入式分发的 AOT 编译）。完整签名见 `src/vm/vm.mbt`。
+
+## `JSValue`
+
+覆盖所有 JS 运行时值的 sum type。Variant：`Undefined`、`Null`、`Bool(Bool)`、`Int32(Int)`、`Number(Double)`、`Str(String)`、`Object(Object)`、`Function(Function)`、`NativeFn(NativeFunction)`。
+
+`Int32` 是 32-bit signed 整数快路径；溢出提升为 `Number(Double)`。详见 [架构 —— 值与对象](/zh/guide/architecture/values)。
+
+## `JSException`
+
+```moonbit
+pub struct JSException {
+  value: JSValue                          // 通常是 Error 家族对象
+  stack: Array[StackFrameInfo]            // throw 时抓取
+}
+pub struct StackFrameInfo {
+  chunk_name: String
+  filename: String
+  loc: SourceLoc                          // 1-based line/col
+}
+```
+
+## Object
+
+公开 accessor：
+
+- `Object::new(shape: Shape, proto: JSValue) -> Object`
+- `Object::add_property(self, key: String, value: JSValue, attrs: Byte)`
+- `Object::get_property(self, key: String) -> JSValue` —— 走原型链
+- `Object::has_property(self, key: String) -> Bool`
+- `Object::has_own(self, key: String) -> Bool`
+- `Object::get_own(self, key: String) -> JSValue?`
+- `Object::set_own(self, key: String, value: JSValue) -> Bool` —— 应该 throw TypeError 时返回 false；由 VM 决定
+
+完整 surface 见 `src/value/pkg.generated.mbti`。

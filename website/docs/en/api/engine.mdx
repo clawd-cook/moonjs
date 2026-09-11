@@ -1,0 +1,64 @@
+---
+description: MoonJS Engine API — new_engine, eval_script, run_chunk, JSValue variants, JSException shape.
+---
+
+# Engine API
+
+## `new_engine() -> Engine`
+
+Convenience constructor. Equivalent to `Engine::new()`. Installs builtins (`Object`, `Error` family, `String`, `undefined`, `NaN`, `Infinity`, `globalThis`) into a fresh global scope.
+
+```moonbit
+let engine = @moonjs.new_engine()
+```
+
+## `eval_script(source: String, filename: String) -> Result[JSValue, JSException]`
+
+Top-level entry point at the root package. Parses → compiles → runs.
+
+```moonbit
+match @moonjs.eval_script("1 + 2 * 3", "<inline>") {
+  Ok(v) => println("result: \{v}")
+  Err(exc) => println("uncaught: \{exc}")
+}
+```
+
+`Parse` and `Compile` errors are wrapped as a `SyntaxError`-shaped `JSException` with the offending `line:col`. Runtime errors surface as their original class (`TypeError`, `ReferenceError`, `Error`, custom throws).
+
+## `Engine::run_chunk(chunk: Chunk) -> Result[JSValue, JSException]`
+
+Lower-level entry when you already have a compiled `Chunk` (e.g. after AOT compilation for embedded distribution). See `src/vm/vm.mbt` for the full signature.
+
+## `JSValue`
+
+Sum type over all JS runtime values. Variants: `Undefined`, `Null`, `Bool(Bool)`, `Int32(Int)`, `Number(Double)`, `Str(String)`, `Object(Object)`, `Function(Function)`, `NativeFn(NativeFunction)`.
+
+`Int32` is a fast path for 32-bit signed integers; overflow promotes to `Number(Double)`. See [Architecture — Values and objects](/guide/architecture/values) for details.
+
+## `JSException`
+
+```moonbit
+pub struct JSException {
+  value: JSValue                          // usually an Error-family object
+  stack: Array[StackFrameInfo]            // captured at throw time
+}
+pub struct StackFrameInfo {
+  chunk_name: String
+  filename: String
+  loc: SourceLoc                          // 1-based line/col
+}
+```
+
+## Object
+
+Public accessors:
+
+- `Object::new(shape: Shape, proto: JSValue) -> Object`
+- `Object::add_property(self, key: String, value: JSValue, attrs: Byte)`
+- `Object::get_property(self, key: String) -> JSValue` — walks prototype chain
+- `Object::has_property(self, key: String) -> Bool`
+- `Object::has_own(self, key: String) -> Bool`
+- `Object::get_own(self, key: String) -> JSValue?`
+- `Object::set_own(self, key: String, value: JSValue) -> Bool` — returns false when the write should throw TypeError; VM decides
+
+Full surface in `src/value/pkg.generated.mbti`.

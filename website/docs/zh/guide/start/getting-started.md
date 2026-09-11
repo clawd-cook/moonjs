@@ -1,55 +1,65 @@
 ---
-description: 了解 Rspress 项目结构、本地开发、生产构建、本地预览和后续学习路径。
+description: 克隆 MoonJS，运行工具链门槛，执行 M1 验收 harness，试用 demo CLI。
 ---
 
 # 快速开始
 
-## 项目结构
+## 前置
 
-使用 `create-rspress` 创建项目后，你会得到以下项目结构：
+- **MoonBit 工具链** —— 见 [MoonBit 安装](https://docs.moonbitlang.com/) 步骤。基线版本：`moon 0.1.20260904`。
+- **Git** —— MoonJS 通过 submodule 引入 QuickJS 作为参考与测试源。
 
-- `docs/`：文档源码目录，通过 `rspress.config.ts` 中的 `root` 配置。
-- `docs/_nav.json`：导航栏配置。
-- `docs/guide/_meta.json`：指南区域的侧边栏配置。
-- `docs/public/`：静态资源目录。
-- `theme/`：可选的自定义主题目录，在选择自定义主题模板时生成。
-- `rspress.config.ts`：Rspress 配置文件。
-
-## 本地开发
-
-启动本地开发服务器：
+## 克隆
 
 ```bash
-npm run dev
+git clone https://github.com/clawd-cook/moonjs.git
+cd moonjs
+git submodule update --init  # 引入 quickjs/（test262 在 M6 前保持未 init）
 ```
 
-:::tip
+## 构建门槛
 
-你可以使用 `--port` 或 `--host` 指定端口号或主机，例如 `rspress dev --port 8080 --host 0.0.0.0`。
-
-:::
-
-## 生产构建
-
-构建生产站点：
+MoonJS 有严格的门槛：格式化、接口生成、warnings-as-errors 编译、完整测试套件，全部通过后步骤才算完成。
 
 ```bash
-npm run build
+moon fmt
+moon info
+moon check --deny-warn --target native
+moon test --target native
 ```
 
-默认情况下，Rspress 会输出到 `doc_build` 目录。
+当前 tree 预期输出：**411 tests, 411 passed, 0 failed。**
 
-## 预览
+## 运行 demo CLI
 
-本地预览生产构建结果：
+`cmd/moonjs` 二进制是一个 smoke test —— parse、compile、执行一段内嵌 JS：
 
 ```bash
-npm run preview
+moon run cmd/moonjs --target native
+```
+
+输出：
+
+```
+moonjs (M1 scaffold)
+ok: eval_script ran without exception
+```
+
+完整 CLI 能力（文件参数、`-e code`、argv 解析）在 **M5** 交付。
+
+## 目录一览
+
+```
+src/                 - 引擎 (util / value / ast / bytecode / lexer / parser / compiler / vm / builtins)
+cmd/moonjs/          - CLI (对标 `qjs`)
+cmd/moonjs-test262/  - test262 驱动 (M6，目前仅骨架)
+quickjs/             - vendored QuickJS：参考实现 + 测试源
+.trellis/            - 任务树与逐包 spec
 ```
 
 ## 下一步
 
-- 学习如何在文档中使用 [MDX 与 React 组件](/guide/use-mdx/components)。
-- 了解 [代码块](/guide/use-mdx/code-blocks/) 的语法高亮和行高亮。
-- 学习用于提示、警告等内容的 [自定义容器](/guide/use-mdx/container)。
-- 浏览完整的 [Rspress 文档](https://rspress.rs/zh/) 了解高级能力。
+- [架构 —— 概览](/zh/guide/architecture/overview) —— 十个 package 与它们的关系。
+- [架构 —— 编译管道](/zh/guide/architecture/pipeline) —— 源码如何变成字节码、VM 如何执行。
+- [架构 —— 字节码](/zh/guide/architecture/bytecode) —— 32-bit 指令布局、wide 前缀、opcode 表。
+- [里程碑](/zh/guide/milestones/overview) —— 当前进度与 M2..M6 展望。
