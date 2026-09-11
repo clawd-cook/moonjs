@@ -1,12 +1,27 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "heyq02/moonjs"
 
+import {
+  "heyq02/moonjs/src/value",
+  "heyq02/moonjs/src/vm",
+}
+
 // Values
+pub fn eval_script(String, String) -> Result[@value.JSValue, @value.JSException]
+
+pub fn new_engine() -> @vm.Engine
 
 // Errors
 
 // Types and methods
 
 // Type aliases
+pub using @vm {type Engine}
+
+pub using @value {type JSException}
+
+pub using @value {type JSValue}
+
+pub using @value {type Object}
 
 // Traits

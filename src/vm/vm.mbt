@@ -234,6 +234,80 @@ pub fn Engine::run_chunk(
   self.execute_frame(frame)
 }
 
+///|
+/// Top-level entry point: parse, compile, and run a JS source string. This
+/// is the primary M1 public API — `Engine::new().eval_script(src, filename)`
+/// takes JS source text and returns the top-level completion value (or an
+/// unhandled `JSException`).
+///
+/// Error handling: parse errors and compile errors are surfaced as
+/// `JSException` values wrapping a `SyntaxError`-shaped plain object (with
+/// `name: "SyntaxError"`, a descriptive `message`, and a single-frame stack
+/// pointing at the offending source location). Runtime exceptions come from
+/// `execute_frame` unchanged.
+///
+/// The reason parse / compile errors are shaped as `SyntaxError` rather than
+/// being returned via a separate error channel is that from the JS user's
+/// perspective they are indistinguishable — both come out of `eval_script`
+/// as thrown Error values. `eval()` in JS behaves the same way, and this
+/// keeps the M1 API surface minimal.
+pub fn Engine::eval_script(
+  self : Engine,
+  source : String,
+  filename : String,
+) -> Result[@value.JSValue, @value.JSException] {
+  // Parse.
+  let parser = match @parser.Parser::new(source, filename) {
+    Ok(p) => p
+    Err(e) => {
+      let @parser.ParseError(msg~, loc~) = e
+      return Err(self.make_syntax_error(msg, loc, filename))
+    }
+  }
+  let program = match parser.parse_script() {
+    Ok(prog) => prog
+    Err(e) => {
+      let @parser.ParseError(msg~, loc~) = e
+      return Err(self.make_syntax_error(msg, loc, filename))
+    }
+  }
+  // Compile.
+  let compiler = @compiler.Compiler::new()
+  let chunk = match compiler.compile_script(program, filename) {
+    Ok(ch) => ch
+    Err(e) => {
+      let @compiler.CompileError(msg~, loc~) = e
+      return Err(self.make_syntax_error(msg, loc, filename))
+    }
+  }
+  // Run.
+  self.run_chunk(chunk)
+}
+
+///|
+/// Build a `JSException` for a parse / compile-time syntax error. Fabricates
+/// an Object with `name: "SyntaxError"`, `message: msg`, wires the proto to
+/// `SyntaxError.prototype`, and packages a single-frame stack pointing at
+/// the offending location.
+fn Engine::make_syntax_error(
+  self : Engine,
+  msg : String,
+  loc : @util.SourceLoc,
+  filename : String,
+) -> @value.JSException {
+  let obj = @value.Object::new(@value.Shape::new(), @value.Null)
+  obj.add_property("name", @value.Str("SyntaxError"), @value.ATTR_DEFAULT_DATA)
+  obj.add_property("message", @value.Str(msg), @value.ATTR_DEFAULT_DATA)
+  // Link to SyntaxError.prototype so `instanceof SyntaxError` succeeds.
+  match self.builtins {
+    Some(bi) => obj.set_proto(@value.Object(bi.syntax_error_proto()))
+    None => ()
+  }
+  let stack : Array[@value.StackFrameInfo] = []
+  stack.push(@value.StackFrameInfo::new("<top>", filename, loc))
+  @value.JSException::new(@value.Object(obj), stack)
+}
+
 // ---------------------------------------------------------------------------
 // Main loop
 // ---------------------------------------------------------------------------
@@ -1351,6 +1425,13 @@ fn typeof_string(v : @value.JSValue) -> String {
 ///   plus a `.length` and `.name` primitive fast path.
 /// - Other primitives → Undefined for now. Real primitive wrapping is
 ///   Step 9's Object.prototype linking work.
+///
+/// Primitive method dispatch for `.toString()`: M1 M3-preview: for
+/// `.toString`, return a NativeFn that when called returns
+/// `ToString(receiver)`. The M1 AC uses this on Number, Boolean, and String
+/// (test_cvt tail `.toString()`, test_op1 assert helper's error messages).
+/// This is a stub — the full Number.prototype.toString(radix) with radix
+/// support and String.prototype.toString identity semantics arrives in M3.
 fn get_property_value(
   v : @value.JSValue,
   name : String,
@@ -1364,6 +1445,9 @@ fn get_property_value(
       if name == "length" {
         return Ok(@value.Int32(s.length()))
       }
+      if name == "toString" || name == "valueOf" {
+        return Ok(primitive_to_string_fn(v))
+      }
       // Try numeric index into the string.
       match parse_array_index(name) {
         Some(i) =>
@@ -1374,6 +1458,12 @@ fn get_property_value(
           }
         None => Ok(@value.Undefined)
       }
+    }
+    Int32(_) | Number(_) | Bool(_) => {
+      if name == "toString" || name == "valueOf" {
+        return Ok(primitive_to_string_fn(v))
+      }
+      Ok(@value.Undefined)
     }
     Function(f) => {
       if name == "name" {
@@ -1404,8 +1494,33 @@ fn get_property_value(
       }
       Ok(@value.Undefined)
     }
-    _ => Ok(@value.Undefined)
   }
+}
+
+///|
+/// M1 stub for primitive `.toString` / `.valueOf`. Captures the receiver
+/// value in a closure and returns a NativeFunction that, when called,
+/// coerces it to a String / returns it unchanged. In JS the actual
+/// `Number.prototype.toString` is a shared function on the Number prototype;
+/// M1 doesn't have primitive-wrapping (`new Number(x)`) machinery so we
+/// synthesise a fresh function per property lookup. This is enough to make
+/// `(1968610...n).toString()` work as an M1 AC path.
+fn primitive_to_string_fn(receiver : @value.JSValue) -> @value.JSValue {
+  let captured = receiver
+  let name = match receiver {
+    Str(_) => "toString"
+    _ => "toString"
+  }
+  let impl_ = fn(
+    _this : @value.JSValue,
+    _args : Array[@value.JSValue],
+  ) -> Result[@value.JSValue, @value.NativeError] {
+    match captured {
+      Str(s) => Ok(@value.Str(s))
+      _ => Ok(@value.Str(to_string(captured)))
+    }
+  }
+  @value.NativeFn(@value.NativeFunction::new(name, false, impl_))
 }
 
 ///|

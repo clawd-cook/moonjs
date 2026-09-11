@@ -508,22 +508,38 @@ fn compile_update(
         Err(e) => return Err(e)
         Ok(_) => ()
       }
+      // JS spec: ++/-- first coerces the LHS to Number, then increments.
+      // Without ToNumber, `let a = true; a++;` would try to do `true + 1`
+      // and leave `Number(2.0)` behind, but `a++` should first ToNumber(true)
+      // → 1, then produce Number(2) — and the pre-increment value bound to
+      // any postfix consumer should be `1`, not `true`.
+      chunk.emit(@bytecode.OP_TO_NUMBER, 0, 0, 0, loc)
+      // stack: old(ToNumber'd)
       if prefix {
         // Compute new, write back leaving new on top.
         chunk.emit_wide_i32(@bytecode.OP_PUSH_I32, 1, loc)
         chunk.emit(add_or_sub, 0, 0, 0, loc)
+        // stack: new
         match compile_identifier_set(c, name, loc) {
           Err(e) => return Err(e)
           Ok(_) => ()
         }
+        // SET_LOCAL / SET_UPVALUE / SET_GLOBAL peek — stack still: new.
         Ok(())
       } else {
-        // Postfix: stash old, compute new, write, leave old.
+        // Postfix: stash old in a temp, compute new, write, restore old.
+        let temp_old = chunk.alloc_local()
         chunk.emit(@bytecode.OP_DUP, 0, 0, 0, loc) // old, old
+        chunk.emit_wide_u32(
+          @bytecode.OP_SET_LOCAL,
+          temp_old.reinterpret_as_uint(),
+          loc,
+        )
+        // SET_LOCAL peeks, so stack still: old, old.
+        chunk.emit(@bytecode.OP_DROP, 0, 0, 0, loc) // stack: old
         chunk.emit_wide_i32(@bytecode.OP_PUSH_I32, 1, loc)
-        chunk.emit(add_or_sub, 0, 0, 0, loc) // old, new
-        // Write new. We call the SET path that consumes-and-doesn't-dup:
-        // inline the SET_* opcode selection.
+        chunk.emit(add_or_sub, 0, 0, 0, loc) // stack: new
+        // Write new to the identifier.
         match c.resolve(name) {
           RefLocal(slot) =>
             chunk.emit_wide_u32(
@@ -546,6 +562,13 @@ fn compile_update(
             )
           }
         }
+        // SET_* peeked new; stack still: new. Drop it and restore old.
+        chunk.emit(@bytecode.OP_DROP, 0, 0, 0, loc)
+        chunk.emit_wide_u32(
+          @bytecode.OP_GET_LOCAL,
+          temp_old.reinterpret_as_uint(),
+          loc,
+        )
         // stack: old
         Ok(())
       }
@@ -588,6 +611,9 @@ fn compile_update_member(
     loc,
   )
   // stack: obj, old
+  // JS spec: ToNumber first, then increment. See compile_update for rationale.
+  chunk.emit(@bytecode.OP_TO_NUMBER, 0, 0, 0, loc)
+  // stack: obj, old(ToNumber'd)
   if prefix {
     chunk.emit_wide_i32(@bytecode.OP_PUSH_I32, 1, loc)
     chunk.emit(add_or_sub, 0, 0, 0, loc)
@@ -597,19 +623,20 @@ fn compile_update_member(
       name_idx.reinterpret_as_uint(),
       loc,
     )
-    // SET_PROP consumes obj+val and pushes val (new). Good.
+    // SET_PROP consumes obj+val and pushes val (new). stack: new.
     Ok(())
   } else {
-    // Postfix: use a temp local to stash old.
-    let temp_slot = chunk.alloc_local()
+    // Postfix: stash old in a temp local so we can restore it after the write.
+    let temp_old = chunk.alloc_local()
     // stack: obj, old
     chunk.emit(@bytecode.OP_DUP, 0, 0, 0, loc) // obj, old, old
     chunk.emit_wide_u32(
       @bytecode.OP_SET_LOCAL,
-      temp_slot.reinterpret_as_uint(),
+      temp_old.reinterpret_as_uint(),
       loc,
     )
-    // stack: obj, old
+    // SET_LOCAL peeks; stack: obj, old, old.
+    chunk.emit(@bytecode.OP_DROP, 0, 0, 0, loc) // stack: obj, old
     chunk.emit_wide_i32(@bytecode.OP_PUSH_I32, 1, loc)
     // stack: obj, old, 1
     chunk.emit(add_or_sub, 0, 0, 0, loc)
@@ -619,12 +646,12 @@ fn compile_update_member(
       name_idx.reinterpret_as_uint(),
       loc,
     )
-    // stack: new
+    // stack: new (SET_PROP pops [obj, val] and pushes val)
     chunk.emit(@bytecode.OP_DROP, 0, 0, 0, loc)
     // stack: (empty)
     chunk.emit_wide_u32(
       @bytecode.OP_GET_LOCAL,
-      temp_slot.reinterpret_as_uint(),
+      temp_old.reinterpret_as_uint(),
       loc,
     )
     // stack: old
@@ -658,6 +685,8 @@ fn compile_update_index(
     temp_obj.reinterpret_as_uint(),
     loc,
   )
+  // SET_LOCAL peeks; stack: obj, obj.
+  chunk.emit(@bytecode.OP_DROP, 0, 0, 0, loc)
   // stack: obj
   match compile_expr(c, index) {
     Err(e) => return Err(e)
@@ -670,9 +699,14 @@ fn compile_update_index(
     temp_idx.reinterpret_as_uint(),
     loc,
   )
+  // stack: obj, idx, idx
+  chunk.emit(@bytecode.OP_DROP, 0, 0, 0, loc)
   // stack: obj, idx
   chunk.emit(@bytecode.OP_GET_ELEM, 0, 0, 0, loc)
   // stack: old
+  // JS spec: ToNumber first, then increment.
+  chunk.emit(@bytecode.OP_TO_NUMBER, 0, 0, 0, loc)
+  // stack: old(ToNumber'd)
   let temp_old = chunk.alloc_local()
   chunk.emit(@bytecode.OP_DUP, 0, 0, 0, loc)
   chunk.emit_wide_u32(
@@ -680,6 +714,8 @@ fn compile_update_index(
     temp_old.reinterpret_as_uint(),
     loc,
   )
+  // stack: old, old
+  chunk.emit(@bytecode.OP_DROP, 0, 0, 0, loc)
   // stack: old
   chunk.emit_wide_i32(@bytecode.OP_PUSH_I32, 1, loc)
   // stack: old, 1
@@ -692,6 +728,8 @@ fn compile_update_index(
     temp_new.reinterpret_as_uint(),
     loc,
   )
+  // stack: new, new
+  chunk.emit(@bytecode.OP_DROP, 0, 0, 0, loc)
   // stack: new
   chunk.emit(@bytecode.OP_DROP, 0, 0, 0, loc)
   // stack: (empty)

@@ -1,5 +1,10 @@
-// import {
-//   "heyq02/moonjs" @lib,
-// }
+// Root package for `cmd/moonjs` — the JS runner binary. In M1 this
+// simply demonstrates that the top-level `@moonjs` API works by evaluating a
+// hardcoded snippet and printing the result. M5 will grow it into a full
+// QuickJS-style CLI (`moonjs run <file.js>`, `-e <code>`, argv passing).
+
+import {
+  "heyq02/moonjs" @lib,
+}
 
 pkgtype(kind: "executable")

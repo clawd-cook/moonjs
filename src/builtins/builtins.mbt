@@ -48,6 +48,7 @@ pub struct Builtins {
   syntax_error_proto : @value.Object
   reference_error_proto : @value.Object
   object_ctor : @value.NativeFunction
+  string_ctor : @value.NativeFunction
   error_ctor : @value.NativeFunction
   type_error_ctor : @value.NativeFunction
   range_error_ctor : @value.NativeFunction
@@ -218,6 +219,7 @@ pub fn Builtins::new() -> Builtins {
 
   // Step 5: allocate the constructor NativeFunctions.
   let object_ctor = @value.NativeFunction::new("Object", true, object_impl)
+  let string_ctor = @value.NativeFunction::new("String", true, string_impl)
   let error_ctor = @value.NativeFunction::new("Error", true, error_impl)
   let type_error_ctor = @value.NativeFunction::new(
     "TypeError", true, error_impl,
@@ -235,6 +237,7 @@ pub fn Builtins::new() -> Builtins {
   // Step 6: wire the .prototype on each constructor. The VM's OP_CONSTRUCT
   // reads this to set the new receiver's [[Prototype]].
   object_ctor.set_prototype(@value.Object(object_proto))
+  string_ctor.set_prototype(@value.Object(string_proto))
   error_ctor.set_prototype(@value.Object(error_proto))
   type_error_ctor.set_prototype(@value.Object(type_error_proto))
   range_error_ctor.set_prototype(@value.Object(range_error_proto))
@@ -273,6 +276,11 @@ pub fn Builtins::new() -> Builtins {
     @value.NativeFn(object_ctor),
     @value.ATTR_DEFAULT_DATA,
   )
+  string_proto.add_property(
+    "constructor",
+    @value.NativeFn(string_ctor),
+    @value.ATTR_DEFAULT_DATA,
+  )
   {
     object_proto,
     function_proto,
@@ -284,6 +292,7 @@ pub fn Builtins::new() -> Builtins {
     syntax_error_proto,
     reference_error_proto,
     object_ctor,
+    string_ctor,
     error_ctor,
     type_error_ctor,
     range_error_ctor,
@@ -301,6 +310,11 @@ pub fn Builtins::install_into(self : Builtins, globals : @value.Object) -> Unit 
   globals.add_property(
     "Object",
     @value.NativeFn(self.object_ctor),
+    @value.ATTR_DEFAULT_DATA,
+  )
+  globals.add_property(
+    "String",
+    @value.NativeFn(self.string_ctor),
     @value.ATTR_DEFAULT_DATA,
   )
   globals.add_property(
@@ -416,6 +430,37 @@ fn error_impl(
         obj.add_property("message", @value.Str(msg), @value.ATTR_DEFAULT_DATA)
       }
       Ok(@value.Object(obj))
+    }
+  }
+}
+
+///|
+/// `new String(x)` / `String(x)` — M1 stub. When called with `new`, the VM
+/// has already materialised a receiver whose proto is String.prototype; we
+/// leave it alone so `instance instanceof String` succeeds. When called
+/// without `new`, coerce the argument to a JS string primitive and return
+/// it (`String(123)` → `"123"`). The zero-arg case yields `""` per spec.
+///
+/// This is enough to satisfy the M1 AC's use of `a instanceof String`
+/// (test_op2). Real String wrapping (with `.valueOf` / index access on the
+/// wrapper object) is deferred to M3.
+fn string_impl(
+  this_val : @value.JSValue,
+  args : Array[@value.JSValue],
+) -> Result[@value.JSValue, @value.NativeError] {
+  match this_val {
+    Object(_) =>
+      // Called via `new`. Preserve the pre-allocated receiver; M1 doesn't
+      // wire an internal [[StringData]] slot.
+      Ok(@value.Undefined)
+    _ => {
+      // Plain call `String(x)` → coerce to string primitive.
+      let s = if args.length() == 0 {
+        ""
+      } else {
+        value_to_display_string(args[0])
+      }
+      Ok(@value.Str(s))
     }
   }
 }

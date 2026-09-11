@@ -9,9 +9,6 @@ import {
   "heyq02/moonjs/src/value",
   "heyq02/moonjs/src/bytecode",
   "heyq02/moonjs/src/builtins",
-}
-
-import {
   "heyq02/moonjs/src/parser",
   "heyq02/moonjs/src/compiler",
-} for "test"
+}

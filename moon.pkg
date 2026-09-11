@@ -1,1 +1,8 @@
+// Root package: public MoonJS API. Re-exports the core types (`Engine`,
+// `JSValue`, `JSException`) so downstream users can write `@moonjs.Engine`
+// without walking into the internal `src/vm` package layout.
 
+import {
+  "heyq02/moonjs/src/value",
+  "heyq02/moonjs/src/vm",
+}

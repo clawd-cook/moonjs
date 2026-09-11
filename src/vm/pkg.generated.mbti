@@ -17,6 +17,7 @@ pub struct Engine {
   chunk_registry : Array[@bytecode.Chunk]
   builtins : @builtins.Builtins?
 }
+pub fn Engine::eval_script(Self, String, String) -> Result[@value.JSValue, @value.JSException]
 pub fn Engine::new() -> Self
 pub fn Engine::run_chunk(Self, @bytecode.Chunk) -> Result[@value.JSValue, @value.JSException]
 

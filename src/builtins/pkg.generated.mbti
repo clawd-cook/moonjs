@@ -21,6 +21,7 @@ pub struct Builtins {
   syntax_error_proto : @value.Object
   reference_error_proto : @value.Object
   object_ctor : @value.NativeFunction
+  string_ctor : @value.NativeFunction
   error_ctor : @value.NativeFunction
   type_error_ctor : @value.NativeFunction
   range_error_ctor : @value.NativeFunction
