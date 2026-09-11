@@ -4,6 +4,8 @@ A JavaScript engine implemented in pure MoonBit.
 
 Goal: pass all test cases in the vendored [`quickjs/`](./quickjs/) tree — both `quickjs/tests/*.js` and the TC39 `test262` suite pinned by QuickJS.
 
+> 中文版：[README-zh.md](./README-zh.md)
+
 ## Status
 
 Managed under Trellis task `moonjs-js-engine`. Progress by milestone:
