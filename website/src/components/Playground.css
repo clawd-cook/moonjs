@@ -9,11 +9,16 @@
   margin: 16px 0;
 }
 
-.moonjs-playground__samples {
+/* Toolbar: sample chips on the left, Run button pushed to the right. */
+.moonjs-playground__toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+}
+
+.moonjs-playground__toolbar-spacer {
+  flex: 1;
 }
 
 .moonjs-playground__samples-label {
@@ -22,7 +27,7 @@
   margin-right: 4px;
 }
 
-.moonjs-playground__samples button {
+.moonjs-playground__chip {
   font-size: 12px;
   padding: 4px 10px;
   background: transparent;
@@ -32,9 +37,54 @@
   cursor: pointer;
 }
 
-.moonjs-playground__samples button:hover {
+.moonjs-playground__chip:hover {
   border-color: var(--rp-c-brand, #3b82f6);
   color: var(--rp-c-brand, #3b82f6);
+}
+
+.moonjs-playground__run {
+  padding: 6px 18px;
+  background: var(--rp-c-brand, #3b82f6);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.moonjs-playground__run:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Split view: editor on the left, output on the right. Stacks on narrow
+   viewports where each pane needs the full width to stay legible. */
+.moonjs-playground__split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  min-height: 320px;
+}
+
+@media (max-width: 720px) {
+  .moonjs-playground__split {
+    grid-template-columns: 1fr;
+  }
+}
+
+.moonjs-playground__pane {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.moonjs-playground__pane-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--rp-c-text-2, #666);
 }
 
 .moonjs-playground__source {
@@ -53,29 +103,35 @@
   background: var(--rp-c-bg, #fff);
   color: var(--rp-c-text-1, #111);
   resize: vertical;
-  min-height: 160px;
+  flex: 1;
+  min-height: 260px;
   width: 100%;
   box-sizing: border-box;
 }
 
-.moonjs-playground__actions {
+/* Output pane always renders — either the panel stack or an empty hint. */
+.moonjs-playground__pane--output {
   display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
-.moonjs-playground__run {
-  padding: 8px 20px;
-  background: var(--rp-c-brand, #3b82f6);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-weight: 500;
-  cursor: pointer;
+.moonjs-playground__panels {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: moonjs-playground-fadein 0.15s ease-out;
 }
 
-.moonjs-playground__run:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+@keyframes moonjs-playground-fadein {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .moonjs-playground__panel {
@@ -83,6 +139,15 @@
   padding: 12px;
   background: var(--rp-c-bg, #fff);
   border: 1px solid var(--rp-c-divider, #d1d5db);
+}
+
+.moonjs-playground__panel--empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  border-style: dashed;
 }
 
 .moonjs-playground__panel--ok {
@@ -120,4 +185,10 @@
   color: var(--rp-c-text-1, #111);
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.moonjs-playground__hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--rp-c-text-2, #666);
 }
